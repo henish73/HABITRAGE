@@ -1,0 +1,13 @@
+.gcloudignore
+.git
+.gitignore
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+**/dist/
+apps/mobile/
+.turbo/
+.env*
+txt
+data/seed_cache.json

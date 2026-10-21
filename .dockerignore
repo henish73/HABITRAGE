@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.turbo
+dist
+apps/mobile
+.env*
+txt
+data/seed_cache.json
