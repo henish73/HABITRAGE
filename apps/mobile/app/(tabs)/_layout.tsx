@@ -1,17 +1,17 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { Home, Landmark, ArrowLeftRight, CalendarCheck, MoreHorizontal } from "lucide-react-native";
+import { Home, ArrowLeftRight, CalendarDays, CreditCard, SlidersHorizontal } from "lucide-react-native";
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#0F172A",
-        tabBarInactiveTintColor: "#94A3B8",
+        tabBarActiveTintColor: "#0E1726",
+        tabBarInactiveTintColor: "#8A99AD",
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
-          borderTopColor: "#F1F5F9",
-          height: 60,
+          borderTopColor: "#DFE5EE",
+          height: 62,
           paddingBottom: 8,
           paddingTop: 8,
         },
@@ -21,50 +21,50 @@ export default function TabLayout() {
         },
         headerStyle: {
           backgroundColor: "#FFFFFF",
-          borderBottomColor: "#F1F5F9",
+          borderBottomColor: "#DFE5EE",
           shadowOpacity: 0,
           elevation: 0,
         },
         headerTitleStyle: {
           fontSize: 16,
-          fontWeight: "bold",
-          color: "#0F172A",
+          fontWeight: "700",
+          color: "#0E1726",
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Home",
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="accounts"
-        options={{
-          title: "Accounts",
-          tabBarIcon: ({ color, size }) => <Landmark color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="transactions"
         options={{
-          title: "Transactions",
+          title: "Activity",
           tabBarIcon: ({ color, size }) => <ArrowLeftRight color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="bills"
         options={{
-          title: "Bills",
-          tabBarIcon: ({ color, size }) => <CalendarCheck color={color} size={size} />,
+          title: "Plan",
+          tabBarIcon: ({ color, size }) => <CalendarDays color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="accounts"
+        options={{
+          title: "Wallet",
+          tabBarIcon: ({ color, size }) => <CreditCard color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
-          title: "More",
-          tabBarIcon: ({ color, size }) => <MoreHorizontal color={color} size={size} />,
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => <SlidersHorizontal color={color} size={size} />,
         }}
       />
     </Tabs>
