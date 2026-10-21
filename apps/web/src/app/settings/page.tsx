@@ -1,15 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFinanceStore } from "@/lib/store";
 import {
   Download, Eye, EyeOff, Bell, Moon, Sun,
-  Database, RefreshCw, AlertTriangle, CheckCircle2, Shield, KeyRound
+  Database, RefreshCw, AlertTriangle, CheckCircle2, Shield, KeyRound, Lock, LogOut
 } from "lucide-react";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { isMasked, toggleMask } = useFinanceStore();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch {
+      window.location.href = "/login";
+    }
+  };
 
   const handleExportAll = () => {
     window.location.href = "/api/export?format=all";
@@ -172,6 +184,43 @@ export default function SettingsPage() {
           >
             <RefreshCw className="w-4 h-4" />
             Re-seed
+          </button>
+        </div>
+      </div>
+
+      {/* Vault Security & Access */}
+      <div className="bg-card rounded-2xl border border-border shadow-vault divide-y divide-border overflow-hidden">
+        <div className="p-6">
+          <h2 className="text-sm font-semibold text-foreground">Vault Security & Access Control</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Authentication guard protecting all financial ledger routes</p>
+        </div>
+
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-foreground">Next.js Edge Middleware Guard</div>
+              <div className="text-xs text-muted-foreground">Blocks all unauthorized API requests and page access</div>
+            </div>
+          </div>
+          <span className="px-3 py-1.5 bg-positive-soft text-positive text-xs font-semibold rounded-xl border border-positive/20">
+            Protected ✓
+          </span>
+        </div>
+
+        <div className="p-6 flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium text-foreground">Active Session</div>
+            <div className="text-xs text-muted-foreground">HttpOnly encrypted token on domain</div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-negative/30 text-negative hover:bg-negative-soft transition cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            Lock Vault / Sign Out
           </button>
         </div>
       </div>

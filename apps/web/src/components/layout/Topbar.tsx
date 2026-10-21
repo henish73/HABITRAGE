@@ -51,74 +51,75 @@ export function Topbar() {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card/90 backdrop-blur-md px-6 flex items-center justify-between gap-4 sticky top-0 z-30">
-      {/* Global Search (DESIGN.md: 40px height, 1px border #E5E7EB, rounded-lg 8px) */}
-      <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+    <header className="h-16 border-b border-border bg-card/90 backdrop-blur-md px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4 sticky top-0 z-30 w-full min-w-0">
+      {/* Global Search */}
+      <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0 max-w-[130px] xs:max-w-[180px] sm:max-w-md">
+        <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-muted-foreground shrink-0" />
         <input
           id="global-search-input"
           type="text"
           value={globalSearch}
           onChange={(e) => setGlobalSearch(e.target.value)}
-          placeholder="Search 4,158 transactions, merchants, accounts... (Cmd+K)"
-          className="w-full h-10 pl-9 pr-12 text-xs rounded-lg bg-card border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder:text-muted-foreground/70"
+          placeholder="Search..."
+          className="w-full h-8 sm:h-10 pl-8 sm:pl-9 pr-2 sm:pr-12 text-xs rounded-lg bg-card border border-border focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder:text-muted-foreground/70"
         />
-        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] bg-secondary border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">
+        <kbd className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 text-[10px] bg-secondary border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">
           ⌘K
         </kbd>
       </form>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        {/* CAD Currency Pill (DESIGN.md: Pill 9999px) */}
-        <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-foreground border border-border">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* CAD Currency Pill */}
+        <div className="hidden lg:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-foreground border border-border">
           <span className="w-2 h-2 rounded-full bg-positive" />
           <span>CAD ($)</span>
         </div>
 
-        {/* Mask Numbers Toggle (DESIGN.md: Secondary button rounded-lg 8px) */}
+        {/* Mask Numbers Toggle */}
         <button
           onClick={toggleMask}
-          title={isMasked ? 'Reveal Account Numbers' : 'Mask Account Numbers'}
-          className="flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-all"
+          title={isMasked ? 'Reveal Balances & Numbers' : 'Mask Balances & Numbers'}
+          className="flex items-center justify-center gap-1.5 text-xs font-medium w-8 h-8 sm:w-auto sm:h-9 sm:px-3 rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-all shrink-0"
         >
           {isMasked ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           <span className="hidden md:inline">{isMasked ? 'Masked' : 'Revealed'}</span>
         </button>
 
-        {/* Simulate Plaid Link */}
+        {/* Connect Bank (Plaid) - Hidden on mobile screens to save space */}
         <button
           onClick={openPlaidModal}
-          className="flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground transition-all"
+          className="hidden sm:flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground transition-all shrink-0"
         >
           <LinkIcon className="w-3.5 h-3.5" />
           <span className="hidden md:inline">Connect Bank</span>
         </button>
 
-        {/* Add Transaction Button (DESIGN.md: Primary button solid #111111, white text, 8px radius) */}
+        {/* Add Transaction Button */}
         <button
           onClick={openAddTransaction}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 h-9 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+          className="flex items-center justify-center gap-1.5 text-xs font-semibold w-8 h-8 sm:w-auto sm:h-9 sm:px-3.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Add Transaction</span>
+          <span className="hidden sm:inline">Add Transaction</span>
         </button>
 
         {/* AI Copilot Drawer Trigger */}
         <button
           onClick={toggleAiDrawer}
           title="Open AI Copilot"
-          className="p-2 h-9 w-9 flex items-center justify-center rounded-lg border border-accent/20 bg-accent/10 text-accent hover:bg-accent/20 transition-all"
+          className="w-8 h-8 sm:w-9 sm:h-9 p-1.5 sm:p-2 flex items-center justify-center rounded-lg border border-accent/20 bg-accent/10 text-accent hover:bg-accent/20 transition-all shrink-0"
         >
-          <Sparkles className="w-4 h-4" />
+          <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
         {/* Dark / Light Toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="p-2 h-9 w-9 flex items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-all"
+          title="Toggle Theme"
+          className="w-8 h-8 sm:w-9 sm:h-9 p-1.5 sm:p-2 flex items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-all shrink-0"
         >
-          {mounted ? (theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />) : <div className="w-4 h-4" />}
+          {mounted ? (theme === 'dark' ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />) : <div className="w-3.5 h-3.5" />}
         </button>
       </div>
     </header>
