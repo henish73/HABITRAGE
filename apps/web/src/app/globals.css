@@ -1,33 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Vault · Light — deep navy structure, teal accent, trust palette */
-    --background: 216 33% 97%;    /* #F5F7FA */
-    --foreground: 216 50% 12%;    /* #0F1B2D */
-    --card: 0 0% 100%;            /* #FFFFFF */
+    /* FinanceOS 2.0 Redesign — Light */
+    --canvas: #F3F5F9;
+    --surface: #FFFFFF;
+    --raised: #F8FAFC;
+    --line: #DFE5EE;
+    --line-soft: #EAEFF5;
+    --ink: #0E1726;
+    --muted-color: #5A6B80;
+    --faint: #8A99AD;
+    --vault: #13294B;
+    --vault-ink: #E9F0FB;
+    --vault-muted: #9FB2CF;
+    --teal: #0E8A78;
+    --teal-soft: #E0F2EE;
+    --pos: #16835A;
+    --neg: #C23A2E;
+    --warn: #B8770A;
+    --pos-soft: #E2F2EA;
+    --neg-soft: #FBE8E5;
+    --warn-soft: #FBF0DA;
+
+    --background: 216 33% 97%;
+    --foreground: 216 50% 12%;
+    --card: 0 0% 100%;
     --card-foreground: 216 50% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 216 50% 12%;
-    --primary: 215 61% 22%;       /* #16325C navy */
+    --primary: 215 61% 22%;       /* #13294B vault navy */
     --primary-foreground: 0 0% 100%;
-    --secondary: 214 32% 94%;     /* #EDF1F6 */
+    --secondary: 214 32% 94%;
     --secondary-foreground: 215 17% 40%;
     --muted: 214 32% 94%;
-    --muted-foreground: 215 17% 40%; /* #56657A */
-    --accent: 172 78% 27%;        /* #0F7B6C vault teal */
+    --muted-foreground: 215 17% 40%;
+    --accent: 172 78% 27%;        /* #0E8A78 vault teal */
     --accent-foreground: 0 0% 100%;
-    --positive: 154 63% 31%;      /* #1D7F55 inflow */
+    --positive: 154 63% 31%;      /* #16835A */
     --positive-foreground: 0 0% 100%;
-    --negative: 4 63% 47%;        /* #C2362C outflow/debt */
+    --negative: 4 63% 47%;        /* #C23A2E */
     --negative-foreground: 0 0% 100%;
     --destructive: 4 63% 47%;
     --destructive-foreground: 0 0% 100%;
-    --warning: 37 94% 37%;        /* #B77406 amber warning */
+    --warning: 37 94% 37%;        /* #B8770A */
     --warning-foreground: 0 0% 100%;
-    --border: 214 28% 89%;        /* #DCE3EC */
+    --border: 214 28% 89%;
     --input: 214 28% 89%;
     --ring: 172 78% 27%;
     --radius: 0.75rem;
@@ -39,31 +61,51 @@
     --chart-5: 262 35% 55%;
   }
 
-  .dark {
-    /* Vault · Dark */
-    --background: 218 43% 8%;     /* #0B111C */
-    --foreground: 215 47% 94%;    /* #E6EDF7 */
-    --card: 218 38% 11%;          /* #121A28 */
+  .dark, [data-theme="dark"] {
+    /* FinanceOS 2.0 Redesign — Dark */
+    --canvas: #070C15;
+    --surface: #0E1522;
+    --raised: #121B2B;
+    --line: #1F2B3F;
+    --line-soft: #172234;
+    --ink: #E7EEF8;
+    --muted-color: #8FA0B7;
+    --faint: #62738C;
+    --vault: #0A1424;
+    --vault-ink: #E7EEF8;
+    --vault-muted: #7F93B1;
+    --teal: #39C9B2;
+    --teal-soft: #0F2E2A;
+    --pos: #4CC38A;
+    --neg: #F2796C;
+    --warn: #E8AE45;
+    --pos-soft: #0F2A1E;
+    --neg-soft: #331614;
+    --warn-soft: #32250D;
+
+    --background: 218 43% 8%;     /* #070C15 */
+    --foreground: 215 47% 94%;    /* #E7EEF8 */
+    --card: 218 38% 11%;          /* #0E1522 */
     --card-foreground: 215 47% 94%;
     --popover: 218 38% 13%;
     --popover-foreground: 215 47% 94%;
-    --primary: 217 60% 76%;       /* #9DB8E6 */
+    --primary: 217 60% 76%;
     --primary-foreground: 218 43% 8%;
     --secondary: 218 36% 17%;
     --secondary-foreground: 215 22% 66%;
     --muted: 218 36% 15%;
-    --muted-foreground: 215 22% 66%; /* #93A3BA */
-    --accent: 170 55% 50%;        /* #3CC4AE vault teal dark */
+    --muted-foreground: 215 22% 66%;
+    --accent: 170 55% 50%;        /* #39C9B2 */
     --accent-foreground: 218 43% 8%;
     --positive: 151 50% 53%;      /* #4CC38A */
     --positive-foreground: 218 43% 8%;
-    --negative: 5 82% 68%;        /* #F07468 */
+    --negative: 5 82% 68%;        /* #F2796C */
     --negative-foreground: 218 43% 8%;
     --destructive: 5 82% 68%;
     --destructive-foreground: 218 43% 8%;
-    --warning: 38 77% 56%;        /* #E5A93A */
+    --warning: 38 77% 56%;        /* #E8AE45 */
     --warning-foreground: 218 43% 8%;
-    --border: 218 37% 21%;        /* #22304A */
+    --border: 218 37% 21%;        /* #1F2B3F */
     --input: 218 37% 21%;
     --ring: 170 55% 50%;
 
@@ -80,62 +122,129 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/10;
-    font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    @apply bg-background text-foreground antialiased selection:bg-accent/20;
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: -0.01em;
   }
 }
 
-/* Vault Ambient Shadows */
-.shadow-vault {
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.04), 0px 1px 2px rgba(0, 0, 0, 0.02);
-}
-.shadow-vault-popover {
-  box-shadow: 0px 8px 16px -4px rgba(0, 0, 0, 0.08), 0px 2px 4px -1px rgba(0, 0, 0, 0.04);
-}
-
-/* Keep old shadow alias for backwards compat */
-.shadow-executive { box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.04), 0px 1px 2px rgba(0, 0, 0, 0.02); }
-.shadow-executive-popover { box-shadow: 0px 8px 16px -4px rgba(0, 0, 0, 0.06), 0px 2px 4px -1px rgba(0, 0, 0, 0.03); }
-
 /* Tabular / Mono figures for all financial values */
+.num,
 .tabular-nums,
 .font-mono,
 [data-tabular],
 .font-financial {
-  font-family: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
-  font-feature-settings: "tnum" on, "cv02", "cv03", "cv04";
+  font-family: 'Geist Mono', ui-monospace, "SF Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* Semantic color utilities */
-.text-positive { color: hsl(var(--positive)); }
-.text-negative { color: hsl(var(--negative)); }
-.text-warning  { color: hsl(var(--warning)); }
+/* Signature Components Styles from 2.0 Design */
+.bsbar {
+  display: flex;
+  height: 14px;
+  border-radius: 99px;
+  overflow: hidden;
+  gap: 3px;
+}
+.bsbar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+}
 
-.bg-positive-soft { background: hsl(var(--positive) / 0.1); }
-.bg-negative-soft { background: hsl(var(--negative) / 0.1); }
-.bg-warning-soft  { background: hsl(var(--warning) / 0.1); }
+/* Card Wallet Cards */
+.ccard {
+  aspect-ratio: 1.586;
+  max-width: 100%;
+  border-radius: 13px;
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #F2F6FC;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.15);
+}
+.ccard::after {
+  content: "";
+  position: absolute;
+  inset: auto -30% -60% auto;
+  width: 120%;
+  height: 120%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.14), transparent);
+  pointer-events: none;
+}
+.amexE { background: linear-gradient(135deg, #2B5C8A, #173A5E); }
+.td    { background: linear-gradient(135deg, #2C7A4B, #17492C); }
+.amexG { background: linear-gradient(135deg, #5E7A62, #34493A); }
+.rog   { background: linear-gradient(135deg, #9B2F2F, #5C1B1B); }
+.cibc  { background: linear-gradient(135deg, #8E2B35, #4E1720); }
+.amexB { background: linear-gradient(135deg, #2D68C4, #1B3F7A); }
 
-/* Privacy mask — blur money figures when masked */
+/* Monograms & Ledger Rows */
+.lrow {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.mono-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* Privacy Mask */
+.blurnum {
+  font-family: 'Geist Mono', ui-monospace, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  filter: blur(7px);
+  user-select: none;
+  transition: filter 0.2s ease;
+}
+.blurnum:hover {
+  filter: none;
+}
 .masked {
   filter: blur(6px);
   user-select: none;
-  pointer-events: none;
   transition: filter 0.2s ease;
 }
 
-/* Custom hairline scrollbars */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.2);
-  border-radius: 9999px;
+/* Ambient Shadows */
+.shadow-vault {
+  box-shadow: 0 1px 2px rgba(14, 23, 38, 0.05), 0 8px 24px -12px rgba(14, 23, 38, 0.12);
 }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.35); }
+.shadow-vault-popover {
+  box-shadow: 0 8px 24px -4px rgba(14, 23, 38, 0.14), 0 2px 6px -1px rgba(14, 23, 38, 0.06);
+}
+
+/* Runway SVG Line Drawing Animation */
+@media (prefers-reduced-motion: no-preference) {
+  .runway .line-draw {
+    stroke-dasharray: 900;
+    stroke-dashoffset: 900;
+    animation: runwayDraw 1.4s 0.2s ease-out forwards;
+  }
+  @keyframes runwayDraw {
+    to { stroke-dashoffset: 0; }
+  }
+}
 
 /* Mobile bottom nav safe area */
 @media (max-width: 1023px) {
   main {
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   }
 }

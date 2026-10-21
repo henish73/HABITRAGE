@@ -10,13 +10,40 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", "IBM Plex Sans", "Inter", "-apple-system", "sans-serif"],
-        mono: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "Consolas", "monospace"],
-        financial: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
+        sans: ["Geist", "IBM Plex Sans", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["Geist Mono", "IBM Plex Mono", "ui-monospace", "SF Mono", "Consolas", "monospace"],
+        financial: ["Geist Mono", "IBM Plex Mono", "ui-monospace", "monospace"],
       },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        canvas: "var(--canvas)",
+        surface: "var(--surface)",
+        raised: "var(--raised)",
+        line: "var(--line)",
+        "line-soft": "var(--line-soft)",
+        ink: "var(--ink)",
+        vault: {
+          DEFAULT: "var(--vault)",
+          ink: "var(--vault-ink)",
+          muted: "var(--vault-muted)",
+        },
+        teal: {
+          DEFAULT: "var(--teal)",
+          soft: "var(--teal-soft)",
+        },
+        pos: {
+          DEFAULT: "var(--pos)",
+          soft: "var(--pos-soft)",
+        },
+        neg: {
+          DEFAULT: "var(--neg)",
+          soft: "var(--neg-soft)",
+        },
+        warn: {
+          DEFAULT: "var(--warn)",
+          soft: "var(--warn-soft)",
+        },
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
@@ -69,15 +96,15 @@ const config: Config = {
         },
       },
       boxShadow: {
+        vault: "0 1px 2px rgba(14,23,38,.05), 0 8px 24px -12px rgba(14,23,38,.12)",
+        "vault-popover": "0 8px 24px -4px rgba(14,23,38,.14), 0 2px 6px -1px rgba(14,23,38,.06)",
         executive: "0px 1px 3px rgba(0, 0, 0, 0.04), 0px 1px 2px rgba(0, 0, 0, 0.02)",
         "executive-popover": "0px 8px 16px -4px rgba(0, 0, 0, 0.06), 0px 2px 4px -1px rgba(0, 0, 0, 0.03)",
-        vault: "0px 1px 3px rgba(0, 0, 0, 0.04), 0px 1px 2px rgba(0, 0, 0, 0.02)",
-        "vault-popover": "0px 8px 16px -4px rgba(0, 0, 0, 0.08), 0px 2px 4px -1px rgba(0, 0, 0, 0.04)",
       },
       borderRadius: {
-        "2xl": "1rem", // 16px standard for cards & containers in DESIGN.md
+        "2xl": "1rem", // 16px
         xl: "0.75rem",  // 12px
-        lg: "0.5rem",   // 8px standard for buttons, inputs, dropdowns in DESIGN.md
+        lg: "0.5rem",   // 8px
         md: "0.375rem",
         sm: "0.25rem",
       },

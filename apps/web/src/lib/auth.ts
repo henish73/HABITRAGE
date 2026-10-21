@@ -21,7 +21,7 @@ function bufferToHex(buffer: ArrayBuffer): string {
     .join('');
 }
 
-function hexToUint8Array(hex: string): Uint8Array {
+function hexToUint8Array(hex: string): Uint8Array<ArrayBuffer> {
   const pairs = hex.match(/.{1,2}/g) || [];
   return new Uint8Array(pairs.map(byte => parseInt(byte, 16)));
 }

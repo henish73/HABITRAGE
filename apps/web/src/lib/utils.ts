@@ -5,6 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export { formatCAD } from '@financeos/shared';
+
 // Vault categorical palette: mid-lightness hues that stay legible on light and dark cards.
 // Reserved semantic colours (positive / negative / warning) are deliberately not used here,
 // so a category never reads as "good" or "bad".
