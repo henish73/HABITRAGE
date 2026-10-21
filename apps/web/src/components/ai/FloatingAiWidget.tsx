@@ -98,7 +98,7 @@ export function FloatingAiWidget() {
       <button
         onClick={toggleAiDrawer}
         title="Open FinanceOS Copilot (⌘K)"
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-[var(--vault)] text-white font-semibold shadow-xl border border-[var(--line)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group"
+        className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-[var(--vault)] text-white font-semibold shadow-xl border border-[var(--line)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group"
       >
         <Sparkles className="w-4 h-4 text-[var(--teal)] animate-pulse" />
         <span className="text-xs font-semibold tracking-tight text-[var(--vault-ink)]">Copilot</span>
@@ -181,21 +181,24 @@ export function FloatingAiWidget() {
                       <div className="whitespace-pre-wrap">{m.content}</div>
 
                       {/* Display Proposed Action Card if AI proposed modifying ledger */}
-                      {m.proposedAction && (
+                      {m.proposedAction && m.proposedAction.transactionId && (
                         <ProposedActionCard
-                          type={m.proposedAction.type || 'delete'}
-                          merchant={m.proposedAction.merchant || 'Uber'}
-                          date={m.proposedAction.date || 'Oct 15'}
-                          amount={m.proposedAction.amount || -5.82}
-                          accountName={m.proposedAction.accountName || 'TD Chequing'}
-                          balanceBefore={m.proposedAction.balanceBefore || 71.80}
-                          balanceAfter={m.proposedAction.balanceAfter || 77.62}
+                          type="delete"
+                          merchant={m.proposedAction.merchant}
+                          date={m.proposedAction.date}
+                          amount={m.proposedAction.amount}
+                          accountName={m.proposedAction.accountName}
+                          balanceBefore={m.proposedAction.balanceBefore}
+                          balanceAfter={m.proposedAction.balanceAfter}
+                          transactionId={m.proposedAction.transactionId}
                           onConfirm={async () => {
-                            if (m.proposedAction.transactionId) {
-                              await fetch(`/api/transactions/${m.proposedAction.transactionId}`, { method: 'DELETE' });
-                              queryClient.invalidateQueries({ queryKey: ['transactions'] });
-                              queryClient.invalidateQueries({ queryKey: ['accounts'] });
+                            const res = await fetch(`/api/transactions/${m.proposedAction.transactionId}`, { method: 'DELETE' });
+                            if (!res.ok) {
+                              throw new Error('Failed to delete transaction');
                             }
+                            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+                            queryClient.invalidateQueries({ queryKey: ['forecast'] });
                           }}
                           onCancel={() => {}}
                         />

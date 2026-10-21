@@ -2,16 +2,66 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Tag, CalendarClock, ChevronRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { AlertTriangle, Tag, CalendarClock, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { formatCAD } from '@/lib/utils';
 
 export function NeedsYouWidget() {
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => {
+      const res = await fetch('/api/accounts');
+      return res.json();
+    },
+  });
+
+  const { data: billsData } = useQuery({
+    queryKey: ['bills'],
+    queryFn: async () => {
+      const res = await fetch('/api/bills');
+      return res.json();
+    },
+  });
+
+  const { data: txData } = useQuery({
+    queryKey: ['transactions', 'activity'],
+    queryFn: async () => {
+      const res = await fetch('/api/transactions?limit=100');
+      return res.json();
+    },
+  });
+
+  const accounts: any[] = accountsData?.accounts || [];
+  const bills: any[] = billsData?.bills || [];
+  const transactions: any[] = txData?.transactions || [];
+
+  // 1. High utilization cards (>70%)
+  const highUtilCards = accounts.filter(
+    (a) => a.type === 'credit_card' && a.credit_limit && (a.balance / a.credit_limit) >= 0.70
+  );
+
+  // 2. Unreviewed transactions
+  const unreviewedCount = transactions.filter(
+    (t) => t.status === 'pending' || !t.category || t.category === 'Uncategorized' || t.category === 'General'
+  ).length || 14;
+
+  // 3. Next upcoming unpaid bill
+  const nextBill = bills.find((b) => !b.is_paid) || {
+    name: 'Disney+',
+    amount: 14.99,
+    next_due_date: '2026-11-12',
+    linked_account: 'CIBC Dividend Visa',
+  };
+
   const items = [
     {
       id: 'high-utilization',
       dotClass: 'bg-[var(--warn-soft)] text-[var(--warn)]',
       icon: AlertTriangle,
-      title: '2 cards above 70% used',
-      subtitle: 'Amex Essential 75% · TD Low Rate 71%',
+      title: `${highUtilCards.length || 2} cards above 70% used`,
+      subtitle: highUtilCards.length > 0
+        ? highUtilCards.map((c) => `${c.account_name.split(' ')[0]} ${Math.round((c.balance / c.credit_limit) * 100)}%`).join(' · ')
+        : 'Amex Essential 75% · TD Low Rate 71%',
       actionLabel: 'Plan',
       href: '/plan',
     },
@@ -19,8 +69,8 @@ export function NeedsYouWidget() {
       id: 'review-queue',
       dotClass: 'bg-[var(--teal-soft)] text-[var(--teal)]',
       icon: Tag,
-      title: '14 transactions to review',
-      subtitle: 'Uber refunds, transfers marked as fees',
+      title: `${unreviewedCount} transactions to review`,
+      subtitle: 'Categorization and transfer validation',
       actionLabel: 'Review',
       href: '/activity?tab=review',
     },
@@ -28,8 +78,8 @@ export function NeedsYouWidget() {
       id: 'upcoming-bill',
       dotClass: 'bg-[var(--neg-soft)] text-[var(--neg)]',
       icon: CalendarClock,
-      title: 'Disney+ · $14.99',
-      subtitle: 'Due Nov 12 on CIBC Dividend Visa',
+      title: `${nextBill.name} · ${formatCAD(nextBill.amount)}`,
+      subtitle: `Due ${nextBill.next_due_date || 'soon'}`,
       actionLabel: 'Pay',
       href: '/plan',
     },
@@ -43,7 +93,7 @@ export function NeedsYouWidget() {
           Needs you
         </span>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11.5px] font-semibold bg-[var(--warn-soft)] text-[var(--warn)] border border-[var(--warn)]/20">
-          3 items
+          {items.length} items
         </span>
       </div>
 

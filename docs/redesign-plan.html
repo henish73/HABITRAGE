@@ -1,0 +1,678 @@
+<title>FinanceOS 2.0 Redesign</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a long-form design proposal; live mockups sit in framed "device" panes that follow the page theme, so toggling light/dark previews both app themes. */
+:root{
+  --canvas:#F3F5F9; --surface:#FFFFFF; --raised:#F8FAFC; --line:#DFE5EE; --line-soft:#EAEFF5;
+  --ink:#0E1726; --muted:#5A6B80; --faint:#8A99AD;
+  --vault:#13294B; --vault-ink:#E9F0FB; --vault-muted:#9FB2CF;   /* navy rail + lock screen */
+  --teal:#0E8A78; --teal-soft:#E0F2EE;
+  --pos:#16835A; --neg:#C23A2E; --warn:#B8770A;
+  --pos-soft:#E2F2EA; --neg-soft:#FBE8E5; --warn-soft:#FBF0DA;
+  --shadow:0 1px 2px rgba(14,23,38,.05),0 8px 24px -12px rgba(14,23,38,.12);
+  --ui:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --num:"Geist Mono",ui-monospace,"SF Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --vault:#0A1424; --vault-ink:#E7EEF8; --vault-muted:#7F93B1;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px -14px rgba(0,0,0,.6);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --vault:#0A1424; --vault-ink:#E7EEF8; --vault-muted:#7F93B1;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px -14px rgba(0,0,0,.6);
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:var(--ui);font-size:15.5px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:48px 96px}
+.page{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:88px}
+h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.02em}
+h1{font-size:clamp(36px,6vw,64px);line-height:1.02;font-weight:800;letter-spacing:-.045em}
+h2{font-size:clamp(26px,3.4vw,36px);line-height:1.1;font-weight:700;letter-spacing:-.03em}
+h3{font-size:17px;font-weight:600}
+p{margin:0;max-width:66ch}
+.eyebrow{font-family:var(--num);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.lede{font-size:18px;color:var(--muted);max-width:62ch}
+.muted{color:var(--muted)}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .warn{color:var(--warn)}
+section{display:flex;flex-direction:column;gap:22px}
+.sec-head{display:flex;flex-direction:column;gap:10px}
+code{font-family:var(--num);font-size:.86em;background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:1px 5px;word-break:break-word}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.25fr 1fr;gap:40px;align-items:end}
+.hero-meta{display:flex;flex-direction:column;gap:14px;border-left:1px solid var(--line);padding-left:24px}
+.hero-meta div{display:flex;flex-direction:column}
+.hero-meta b{font-family:var(--num);font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.principles{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.principles>div{padding:20px 22px 22px 0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.principles>div+div{padding-left:22px;border-left:1px solid var(--line)}
+.principles p{font-size:14px;color:var(--muted)}
+
+/* ---------- desktop mock ---------- */
+.scroller{overflow-x:auto;border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.desk{min-width:1000px;display:grid;grid-template-columns:76px 1fr;background:var(--canvas);font-size:13px}
+.rail{background:var(--vault);color:var(--vault-muted);display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0}
+.rail .logo{width:38px;height:38px;border-radius:11px;background:var(--teal);color:var(--vault);display:grid;place-items:center;margin-bottom:14px}
+.rail .logo svg{stroke:#fff}
+.rail a{width:56px;padding:9px 0 7px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;color:inherit;text-decoration:none}
+.rail a.on{background:rgba(255,255,255,.08);color:var(--vault-ink)}
+.rail a.on svg{color:var(--teal)}
+.rail .spacer{flex:1}
+.rail .me{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:12px;color:var(--vault-ink);font-weight:600}
+.main{padding:22px 28px 28px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.top{display:flex;align-items:center;gap:14px}
+.top .hello{display:flex;flex-direction:column}
+.top .hello b{font-size:18px;letter-spacing:-.02em}
+.top .hello span{color:var(--muted);font-size:12px}
+.cmd{margin-left:auto;display:flex;align-items:center;gap:10px;width:360px;height:38px;border-radius:11px;background:var(--surface);border:1px solid var(--line);padding:0 12px;color:var(--faint)}
+.cmd kbd{margin-left:auto;font-family:var(--num);font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--muted)}
+.ibtn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--muted)}
+.pbtn{height:38px;border-radius:11px;background:var(--ink);color:var(--canvas);display:flex;align-items:center;gap:6px;padding:0 14px;font-weight:600}
+.grid-a{display:grid;grid-template-columns:1.55fr 1fr;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.big{font-family:var(--num);font-size:40px;font-weight:600;letter-spacing:-.04em;line-height:1}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:99px;font-size:11.5px;font-weight:600;border:1px solid var(--line);color:var(--muted);background:var(--surface);white-space:nowrap}
+.chip.t{color:var(--teal);background:var(--teal-soft);border-color:transparent}
+.chip.w{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.chip.n{color:var(--neg);background:var(--neg-soft);border-color:transparent}
+.chip.p{color:var(--pos);background:var(--pos-soft);border-color:transparent}
+.bsbar{display:flex;height:14px;border-radius:99px;overflow:hidden;gap:3px}
+.bsbar i{display:block;height:100%;border-radius:99px}
+.legend{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.legend b{display:block;font-family:var(--num);font-size:15px;color:var(--ink);font-weight:600}
+.attn{display:flex;flex-direction:column;gap:2px}
+.attn .it{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line-soft)}
+.attn .it:first-child{border-top:0}
+.dot{width:30px;height:30px;border-radius:9px;display:grid;place-items:center}
+.dot.w{background:var(--warn-soft);color:var(--warn)} .dot.t{background:var(--teal-soft);color:var(--teal)} .dot.n{background:var(--neg-soft);color:var(--neg)}
+.attn small{display:block;color:var(--muted);font-size:11.5px}
+.runway svg{width:100%;height:auto;display:block}
+.runway .axis{display:flex;justify-content:space-between;font-family:var(--num);font-size:10.5px;color:var(--faint)}
+.wallet{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.ccard{aspect-ratio:1.586;max-width:100%;border-radius:13px;padding:12px 13px;display:flex;flex-direction:column;justify-content:space-between;color:#F2F6FC;position:relative;overflow:hidden}
+.ccard::after{content:"";position:absolute;inset:auto -30% -60% auto;width:120%;height:120%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.14),transparent)}
+.ccard .nm{font-size:11.5px;font-weight:600;opacity:.92}
+.ccard .bal{font-family:var(--num);font-size:17px;font-weight:600}
+.ccard .ut{display:flex;align-items:center;gap:7px;font-size:10.5px;opacity:.9}
+.ccard .ut i{flex:1;height:4px;border-radius:9px;background:rgba(255,255,255,.22);overflow:hidden;display:block}
+.ccard .ut i b{display:block;height:100%;border-radius:9px}
+.amexE{background:linear-gradient(135deg,#2B5C8A,#173A5E)} .td{background:linear-gradient(135deg,#2C7A4B,#17492C)}
+.amexG{background:linear-gradient(135deg,#5E7A62,#34493A)} .rog{background:linear-gradient(135deg,#9B2F2F,#5C1B1B)}
+.cibc{background:linear-gradient(135deg,#8E2B35,#4E1720)}
+.ledger{display:flex;flex-direction:column}
+.lday{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600;padding:10px 0 4px;display:flex;justify-content:space-between}
+.lrow{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line-soft)}
+.mono{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff}
+.lrow .who{min-width:0}
+.lrow .who b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .who span{color:var(--muted);font-size:11.5px}
+.lrow .amt{text-align:right;font-family:var(--num);font-weight:600}
+.lrow .amt small{display:block;font-family:var(--ui);font-weight:500}
+
+/* ---------- phones ---------- */
+.phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:26px;justify-items:center}
+.phone-wrap{display:flex;flex-direction:column;gap:12px;align-items:center;width:100%;max-width:280px}
+.phone-wrap p{font-size:13.5px;color:var(--muted);text-align:center}
+.phone{width:100%;max-width:280px;aspect-ratio:9/19.3;border-radius:40px;padding:9px;background:var(--ink);box-shadow:var(--shadow)}
+.screen{width:100%;height:100%;border-radius:32px;overflow:hidden;background:var(--canvas);position:relative;display:flex;flex-direction:column;font-size:12px}
+.sbar{display:flex;justify-content:space-between;padding:12px 22px 4px;font-family:var(--num);font-size:11px;font-weight:600}
+.island{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:76px;height:22px;border-radius:20px;background:#000}
+.scr-body{flex:1;padding:8px 14px 0;display:flex;flex-direction:column;gap:11px;min-height:0;overflow:hidden}
+.tabbar{display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding:8px 6px 18px;background:var(--surface);border-top:1px solid var(--line);color:var(--faint);font-size:9.5px}
+.tabbar span{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar span.on{color:var(--ink)} .tabbar span.on svg{color:var(--teal)}
+.tabbar .fab{width:44px;height:44px;border-radius:15px;background:var(--teal);color:#fff;display:grid;place-items:center;justify-self:center;margin-top:-22px;box-shadow:0 8px 18px -6px var(--teal)}
+.m-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 13px;display:flex;flex-direction:column;gap:8px}
+.m-big{font-family:var(--num);font-size:27px;font-weight:600;letter-spacing:-.04em}
+.carousel{display:flex;gap:9px;overflow:hidden}
+.carousel .ccard{flex:0 0 150px;padding:10px 11px}
+.carousel .ccard .bal{font-size:14px}
+.lock{background:var(--vault);color:var(--vault-ink);align-items:center}
+.lock .sbar{width:100%}
+.lock-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 22px;text-align:center}
+.dial{width:150px;height:150px}
+.lock .btn{width:100%;height:42px;border-radius:13px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13px}
+.lock .link{color:var(--vault-muted);font-size:12px}
+.swipe{position:relative;border-radius:12px;overflow:hidden;background:var(--teal)}
+.swipe .under{position:absolute;inset:0;display:flex;align-items:center;gap:6px;padding-left:14px;color:#fff;font-weight:600;font-size:11.5px}
+.swipe .lrow{background:var(--surface);transform:translateX(96px);border-top:0;padding:9px 11px;border-radius:12px 0 0 12px}
+.m-list .lrow{padding:7px 0}
+.m-list .lrow .who b{font-size:12px}
+.seg{display:flex;gap:4px;background:var(--raised);border:1px solid var(--line);border-radius:11px;padding:3px}
+.seg span{flex:1;text-align:center;padding:5px 0;border-radius:8px;font-size:11px;font-weight:600;color:var(--muted)}
+.seg span.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.dim{position:absolute;inset:0;background:rgba(5,10,20,.45)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:24px 24px 0 0;padding:10px 14px 22px;display:flex;flex-direction:column;gap:10px}
+.grab{width:36px;height:4px;border-radius:9px;background:var(--line);align-self:center}
+.bubble{align-self:flex-end;background:var(--ink);color:var(--canvas);padding:8px 11px;border-radius:14px 14px 4px 14px;max-width:85%;font-size:12px}
+.ai{font-size:12px;color:var(--muted)}
+.action{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.action .hd{display:flex;align-items:center;gap:7px;padding:8px 11px;background:var(--neg-soft);color:var(--neg);font-weight:600;font-size:11.5px}
+.action .bd{padding:10px 11px;display:flex;flex-direction:column;gap:6px}
+.action .ft{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 11px 11px}
+.action .ft span{height:34px;border-radius:10px;display:grid;place-items:center;font-weight:600;font-size:12px;border:1px solid var(--line)}
+.action .ft span.del{background:var(--neg);color:#fff;border-color:transparent}
+
+/* ---------- IA ---------- */
+.ia{display:grid;grid-template-columns:1fr auto 1fr;gap:24px;align-items:center}
+.ia-col{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.ia-col ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.ia-col li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-radius:9px;background:var(--raised)}
+.ia-col li small{color:var(--muted)}
+.ia-col.new li{background:var(--teal-soft)}
+.ia-col.new li b{color:var(--ink)}
+.arrow{color:var(--faint)}
+
+/* ---------- components ---------- */
+.comps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.comp{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.comp .demo{background:var(--raised);border:1px solid var(--line-soft);border-radius:12px;padding:14px;min-height:92px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.comp p{font-size:13.5px;color:var(--muted)}
+.ring{width:56px;height:56px}
+.blurnum{font-family:var(--num);font-size:22px;font-weight:600;filter:blur(7px);user-select:none}
+
+/* ---------- tokens ---------- */
+.tokens{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tk{border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line)}
+.tk.l{background:#F3F5F9;color:#0E1726} .tk.d{background:#070C15;color:#E7EEF8;border-color:#1F2B3F}
+.sw{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.sw div{display:flex;flex-direction:column;gap:5px;font-size:11px}
+.sw i{display:block;height:46px;border-radius:10px;border:1px solid rgba(127,140,160,.25)}
+.sw span{font-family:var(--num);font-size:10.5px;opacity:.7}
+.type{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.type>div{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:baseline;padding:13px 20px;border-top:1px solid var(--line-soft)}
+.type>div:first-child{border-top:0}
+.type small{font-family:var(--num);font-size:11.5px;color:var(--muted)}
+
+/* ---------- tables, roadmap ---------- */
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{text-align:left;padding:11px 18px;border-top:1px solid var(--line-soft);vertical-align:top}
+th{border-top:0;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--raised)}
+td:first-child{font-weight:600;white-space:nowrap}
+td small{color:var(--muted)}
+.road{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:9px}
+.ph{position:relative;padding:0 0 26px 30px;display:grid;grid-template-columns:1fr auto;gap:6px 18px}
+.ph::before{content:"";position:absolute;left:-9px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--canvas);border:2px solid var(--teal)}
+.ph:last-child{padding-bottom:0}
+.ph h3 span{font-family:var(--num);font-size:12px;color:var(--teal);font-weight:600;margin-right:8px}
+.ph p{grid-column:1/-1;font-size:14px;color:var(--muted);max-width:80ch}
+.ph .sz{font-family:var(--num);font-size:12px;color:var(--muted);white-space:nowrap}
+.note{font-size:13px;color:var(--faint)}
+
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr}.hero-meta{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px;flex-direction:row;flex-wrap:wrap;gap:20px}
+  .principles{grid-template-columns:1fr 1fr}.principles>div:nth-child(3){padding-left:0;border-left:0}
+  .principles>div:nth-child(n+3){border-top:1px solid var(--line)}
+  .comps{grid-template-columns:1fr 1fr}.tokens{grid-template-columns:1fr}
+  .ia{grid-template-columns:1fr}.arrow{transform:rotate(90deg);justify-self:center}
+}
+@media (max-width:560px){
+  .principles{grid-template-columns:1fr}.principles>div{padding-left:0!important;border-left:0!important;border-top:1px solid var(--line)}
+  .principles>div:first-child{border-top:0}
+  .comps{grid-template-columns:1fr}.sw{grid-template-columns:repeat(3,1fr)}
+  .type>div{grid-template-columns:1fr;gap:2px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .runway .line{stroke-dasharray:900;stroke-dashoffset:900;animation:draw 1.4s .2s ease-out forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="act" viewBox="0 0 24 24"><path d="M4 7h13M14 4l3 3-3 3M20 17H7M10 14l-3 3 3 3"/></symbol>
+  <symbol id="wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></symbol>
+  <symbol id="plan" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/></symbol>
+  <symbol id="spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></symbol>
+  <symbol id="face" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M9 9v1M15 9v1M12 9v4h-1M9.5 16s1 1 2.5 1 2.5-1 2.5-1"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+
+<div class="page">
+
+<!-- HERO -->
+<header class="hero">
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <span class="eyebrow">FinanceOS 2.0 · Redesign plan</span>
+    <h1>Calm money. Every number earns its place.</h1>
+    <p class="lede">A complete redesign of the web and mobile apps around one idea: when you open FinanceOS, you should know within three seconds whether you're okay, what needs you, and what's coming.</p>
+  </div>
+  <div class="hero-meta">
+    <div><b>Scope</b>Web app, iOS and Android, shared design tokens</div>
+    <div><b>Look</b>Deep navy and vault teal, Geist with Geist Mono for money</div>
+    <div><b>Signature</b>Balance-sheet bar, 30-day cash runway, card wallet</div>
+    <div><b>Size</b>9 phases, about 6–8 weeks for one developer</div>
+  </div>
+</header>
+
+<div class="principles">
+  <div><h3>One answer first</h3><p>Every screen opens with the one figure that matters there. The details sit under it.</p></div>
+  <div><h3>Color means something</h3><p>Teal for actions, green for money in, brick red for money out and debt, amber for "look at this". Nothing decorative.</p></div>
+  <div><h3>Safe by feel</h3><p>Masked by default, Face ID on mobile, undo for every delete, and AI that asks before it changes anything.</p></div>
+  <div><h3>Fewer, better screens</h3><p>Nine sidebar items become five. Pending holds, credit and analytics move to where you'd look for them.</p></div>
+</div>
+
+<!-- WEB HOME -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Web · Home</span>
+    <h2>The new home screen</h2>
+    <p class="muted">Built with your real balances. A slim navy rail replaces the 256 px sidebar, the command bar replaces search and the floating AI button, and the dashboard answers three questions in order: where you stand, what needs you, what's coming. Toggle your system theme to see dark mode.</p>
+  </div>
+  <div class="scroller" role="img" aria-label="Mockup of the redesigned FinanceOS web home screen">
+    <div class="desk">
+      <nav class="rail">
+        <div class="logo"><svg class="i"><use href="#shield"/></svg></div>
+        <a class="on"><svg class="i"><use href="#home"/></svg>Home</a>
+        <a><svg class="i"><use href="#act"/></svg>Activity</a>
+        <a><svg class="i"><use href="#wallet"/></svg>Wallet</a>
+        <a><svg class="i"><use href="#plan"/></svg>Plan</a>
+        <a><svg class="i"><use href="#spark"/></svg>Copilot</a>
+        <span class="spacer"></span>
+        <div class="me">FO</div>
+      </nav>
+      <div class="main">
+        <div class="top">
+          <div class="hello"><b>Good evening</b><span>Wednesday, October 21 · Synced 2 min ago</span></div>
+          <div class="cmd"><svg class="i"><use href="#search"/></svg>Ask, search or jump to…<kbd>⌘K</kbd></div>
+          <div class="ibtn"><svg class="i"><use href="#eye"/></svg></div>
+          <div class="pbtn"><svg class="i"><use href="#plus"/></svg>New</div>
+        </div>
+
+        <div class="grid-a">
+          <div class="panel">
+            <div class="row"><span class="label">Net worth</span><span class="chip">CAD · 13 accounts</span></div>
+            <div class="row" style="align-items:flex-end">
+              <div class="big neg">−$12,978.39</div>
+              <span class="chip n">Debt is 6× your cash</span>
+            </div>
+            <div class="bsbar"><i style="width:14.2%;background:var(--teal)"></i><i style="flex:1;background:var(--neg);opacity:.85"></i></div>
+            <div class="legend">
+              <span>Cash in 7 bank accounts<b>$2,579.77</b></span>
+              <span style="text-align:right">Owed on 6 cards<b class="neg">$15,558.16</b></span>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="row"><span class="label">Needs you</span><span class="chip w">3 items</span></div>
+            <div class="attn">
+              <div class="it"><span class="dot w"><svg class="i"><use href="#alert"/></svg></span><div><b>2 cards above 70% used</b><small>Amex Essential 75% · TD Low Rate 71%</small></div><span class="chip">Plan</span></div>
+              <div class="it"><span class="dot t"><svg class="i"><use href="#tag"/></svg></span><div><b>14 transactions to review</b><small>Uber refunds, transfers marked as fees</small></div><span class="chip">Review</span></div>
+              <div class="it"><span class="dot n"><svg class="i"><use href="#cal"/></svg></span><div><b>Disney+ · $14.99</b><small>Due Nov 12 on CIBC Dividend Visa</small></div><span class="chip">Pay</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel runway">
+          <div class="row">
+            <div><span class="label">Cash runway · next 30 days</span><div style="font-size:12px;color:var(--muted)">Lowest point <b class="num" style="color:var(--ink)">$2,081</b> on Nov 12 · never below $0</div></div>
+            <div style="display:flex;gap:6px"><span class="chip p">+ Payday Oct 30</span><span class="chip n">− Amex min Nov 5</span><span class="chip p">+ Payday Nov 13</span></div>
+          </div>
+          <svg viewBox="0 0 600 130" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="rw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--teal)" stop-opacity=".22"/><stop offset="1" stop-color="var(--teal)" stop-opacity="0"/></linearGradient></defs>
+            <g stroke="var(--line-soft)" stroke-width="1"><line x1="0" y1="30" x2="600" y2="30"/><line x1="0" y1="70" x2="600" y2="70"/><line x1="0" y1="110" x2="600" y2="110"/></g>
+            <path d="M0,120 L0.0,58.3 L20.0,60.7 L40.0,63.1 L60.0,65.5 L80.0,67.9 L100.0,70.3 L120.0,72.7 L140.0,75.1 L160.0,77.5 L180.0,37.0 L200.0,39.4 L220.0,41.8 L240.0,44.2 L260.0,46.6 L280.0,49.0 L300.0,68.8 L320.0,71.2 L340.0,73.6 L360.0,76.0 L380.0,78.4 L400.0,82.0 L420.0,84.4 L440.0,86.8 L460.0,46.2 L480.0,48.6 L500.0,51.0 L520.0,53.4 L540.0,55.8 L560.0,58.2 L580.0,60.6 L600.0,63.0 L600,120 Z" fill="url(#rw)"/>
+            <path class="line" d="M0.0,58.3 L20.0,60.7 L40.0,63.1 L60.0,65.5 L80.0,67.9 L100.0,70.3 L120.0,72.7 L140.0,75.1 L160.0,77.5 L180.0,37.0 L200.0,39.4 L220.0,41.8 L240.0,44.2 L260.0,46.6 L280.0,49.0 L300.0,68.8 L320.0,71.2 L340.0,73.6 L360.0,76.0 L380.0,78.4 L400.0,82.0 L420.0,84.4 L440.0,86.8 L460.0,46.2 L480.0,48.6 L500.0,51.0 L520.0,53.4 L540.0,55.8 L560.0,58.2 L580.0,60.6 L600.0,63.0" fill="none" stroke="var(--teal)" stroke-width="2.2" vector-effect="non-scaling-stroke"/>
+            <g fill="var(--surface)" stroke-width="2" vector-effect="non-scaling-stroke">
+              <circle cx="180" cy="37" r="4" stroke="var(--pos)"/><circle cx="300" cy="68.8" r="4" stroke="var(--neg)"/><circle cx="440" cy="86.8" r="4" stroke="var(--warn)"/><circle cx="460" cy="46.2" r="4" stroke="var(--pos)"/>
+            </g>
+            <circle cx="0" cy="58.3" r="4.5" fill="var(--teal)"/>
+          </svg>
+          <div class="axis"><span>Today</span><span>Oct 30</span><span>Nov 5</span><span>Nov 12</span><span>Nov 20</span></div>
+        </div>
+
+        <div class="grid-a" style="grid-template-columns:1.1fr 1fr">
+          <div class="panel">
+            <div class="row"><span class="label">Card wallet</span><span class="chip">6 cards · $28,100 limit</span></div>
+            <div class="wallet" style="grid-template-columns:repeat(2,1fr)">
+              <div class="ccard amexE"><span class="nm">Amex Essential</span><span class="bal">$10,145.23</span><span class="ut"><i><b style="width:75%;background:#F6C564"></b></i>75%</span></div>
+              <div class="ccard td"><span class="nm">TD Low Rate Visa</span><span class="bal">$709.86</span><span class="ut"><i><b style="width:71%;background:#F6C564"></b></i>71%</span></div>
+              <div class="ccard amexG"><span class="nm">Amex Green</span><span class="bal">$4,595.92</span><span class="ut"><i><b style="width:54%;background:#fff"></b></i>54%</span></div>
+              <div class="ccard rog"><span class="nm">Rogers Mastercard</span><span class="bal">$75.71</span><span class="ut"><i><b style="width:15%;background:#fff"></b></i>15%</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="row"><span class="label">Latest activity</span><span class="chip">See all</span></div>
+            <div class="ledger">
+              <div class="lday"><span>Today · Oct 16</span><span class="num pos">+$596.45</span></div>
+              <div class="lrow"><span class="mono" style="background:#2F6BB3">G</span><div class="who"><b>Garda Canada</b><span>Payroll · CIBC Smart</span></div><div class="amt pos">+$751.30</div></div>
+              <div class="lrow"><span class="mono" style="background:#B5577F">T</span><div class="who"><b>Tim Hortons</b><span>Dining · CIBC Dividend Visa</span></div><div class="amt">−$4.85</div></div>
+              <div class="lrow"><span class="mono" style="background:#5B7088">⇄</span><div class="who"><b>Transfer to card</b><span>Transfers · CIBC Smart</span></div><div class="amt">−$150.00</div></div>
+              <div class="lday"><span>Oct 15</span><span class="num">−$61.32</span></div>
+              <div class="lrow"><span class="mono" style="background:#14968A">U</span><div class="who"><b>Uber</b><span>Rideshare · TD Chequing</span></div><div class="amt">−$5.82</div></div>
+              <div class="lrow"><span class="mono" style="background:#8C7B55">$</span><div class="who"><b>TD monthly fee</b><span>Bank fees · TD Chequing</span></div><div class="amt">−$5.00</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note">The runway uses your real starting cash and biweekly Garda paycheque ($751.30), with an estimated $42/day of spending. The live version would calculate it from your bills and pay history.</p>
+</section>
+
+<!-- MOBILE -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Mobile · iOS & Android</span>
+    <h2>A phone app that feels native</h2>
+    <p class="muted">The current Expo app shows hard-coded sample balances that aren't yours and never calls the API. The rebuild connects to your real ledger, opens with Face ID, and is designed for one thumb: four tabs plus a centre "+" for adding a transaction in two taps.</p>
+  </div>
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone"><div class="screen lock">
+        <div class="island"></div>
+        <div class="sbar"><span>9:41</span><span>●●●</span></div>
+        <div class="lock-body">
+          <svg class="dial" viewBox="0 0 150 150" aria-hidden="true">
+            <circle cx="75" cy="75" r="70" fill="none" stroke="var(--vault-muted)" stroke-opacity=".25" stroke-width="1"/>
+            <circle cx="75" cy="75" r="56" fill="none" stroke="var(--vault-muted)" stroke-opacity=".35" stroke-width="1" stroke-dasharray="2 6"/>
+            <circle cx="75" cy="75" r="42" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-dasharray="190 74" stroke-linecap="round" transform="rotate(-90 75 75)"/>
+            <g transform="translate(57 57) scale(1.5)" fill="none" stroke="var(--vault-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#face"/></g>
+          </svg>
+          <div><div style="font-size:19px;font-weight:700;letter-spacing:-.02em">FinanceOS is locked</div><div style="color:var(--vault-muted);font-size:12px;margin-top:4px">Locks after 5 minutes in the background</div></div>
+          <div class="btn"><svg class="i"><use href="#face"/></svg>Unlock with Face ID</div>
+          <div class="link">Use passcode instead</div>
+        </div>
+      </div></div>
+      <p><b style="color:var(--ink)">Unlock.</b> The vault dial turns while Face ID runs, then opens with a soft haptic.</p>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="sbar"><span>9:41</span><span>●●●</span></div>
+        <div class="scr-body">
+          <div class="row"><div><div style="font-size:11px;color:var(--muted)">Good evening</div><div style="font-weight:700;font-size:16px;letter-spacing:-.02em">Your money</div></div><div class="ibtn" style="width:32px;height:32px"><svg class="i" style="width:15px;height:15px"><use href="#eye"/></svg></div></div>
+          <div class="m-card">
+            <span class="label">Net worth</span>
+            <div class="m-big neg">−$12,978.39</div>
+            <div class="bsbar" style="height:10px"><i style="width:14.2%;background:var(--teal)"></i><i style="flex:1;background:var(--neg);opacity:.85"></i></div>
+            <div class="legend" style="font-size:10.5px"><span>Cash<b style="font-size:12.5px">$2,579.77</b></span><span style="text-align:right">Owed<b style="font-size:12.5px" class="neg">$15,558.16</b></span></div>
+          </div>
+          <div class="m-card runway" style="gap:6px">
+            <div class="row"><span class="label">Runway</span><span class="chip p" style="height:20px;font-size:10px">Safe 30 days</span></div>
+            <svg viewBox="0 0 280 56" aria-hidden="true"><path class="line" d="M0.0,27.2 L9.3,28.3 L18.7,29.4 L28.0,30.6 L37.3,31.7 L46.7,32.8 L56.0,33.9 L65.3,35.0 L74.7,36.2 L84.0,17.3 L93.3,18.4 L102.7,19.5 L112.0,20.6 L121.3,21.7 L130.7,22.9 L140.0,32.1 L149.3,33.2 L158.7,34.3 L168.0,35.4 L177.3,36.6 L186.7,38.3 L196.0,39.4 L205.3,40.5 L214.7,21.6 L224.0,22.7 L233.3,23.8 L242.7,24.9 L252.0,26.1 L261.3,27.2 L270.7,28.3 L280.0,29.4" fill="none" stroke="var(--teal)" stroke-width="2"/></svg>
+          </div>
+          <div class="row"><span class="label">Cards</span><span style="font-size:11px;color:var(--teal);font-weight:600">See all</span></div>
+          <div class="carousel">
+            <div class="ccard amexE"><span class="nm">Amex Essential</span><span class="bal">$10,145.23</span><span class="ut"><i><b style="width:75%;background:#F6C564"></b></i>75%</span></div>
+            <div class="ccard td"><span class="nm">TD Low Rate</span><span class="bal">$709.86</span><span class="ut"><i><b style="width:71%;background:#F6C564"></b></i>71%</span></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <span class="on"><svg class="i"><use href="#home"/></svg>Home</span>
+          <span><svg class="i"><use href="#act"/></svg>Activity</span>
+          <span class="fab"><svg class="i"><use href="#plus"/></svg></span>
+          <span><svg class="i"><use href="#plan"/></svg>Plan</span>
+          <span><svg class="i"><use href="#wallet"/></svg>Wallet</span>
+        </div>
+      </div></div>
+      <p><b style="color:var(--ink)">Home.</b> The same three answers as the web, stacked for a phone. Cards swipe sideways.</p>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="sbar"><span>9:41</span><span>●●●</span></div>
+        <div class="scr-body">
+          <div style="font-weight:700;font-size:16px;letter-spacing:-.02em">Activity</div>
+          <div class="seg"><span class="on">All</span><span>To review · 14</span><span>Pending</span></div>
+          <div class="m-list ledger">
+            <div class="lday"><span>Today</span><span class="num pos">+$596.45</span></div>
+            <div class="lrow"><span class="mono" style="background:#2F6BB3">G</span><div class="who"><b>Garda Canada</b><span>Payroll</span></div><div class="amt pos">+$751.30</div></div>
+            <div class="swipe"><div class="under"><svg class="i"><use href="#tag"/></svg>Dining</div>
+              <div class="lrow"><span class="mono" style="background:#B5577F">T</span><div class="who"><b>Tim Hortons</b><span>Pending</span></div><div class="amt">−$4.85</div></div></div>
+            <div class="lrow"><span class="mono" style="background:#5B7088">⇄</span><div class="who"><b>Transfer to card</b><span>Transfers</span></div><div class="amt">−$150.00</div></div>
+            <div class="lday"><span>Oct 15</span><span class="num">−$61.32</span></div>
+            <div class="lrow"><span class="mono" style="background:#14968A">U</span><div class="who"><b>Uber</b><span>Rideshare</span></div><div class="amt">−$5.82</div></div>
+            <div class="lrow"><span class="mono" style="background:#8C7B55">$</span><div class="who"><b>TD monthly fee</b><span>Bank fees</span></div><div class="amt">−$5.00</div></div>
+            <div class="lrow"><span class="mono" style="background:#7A5BB5">e</span><div class="who"><b>e-Transfer sent</b><span>Transfers</span></div><div class="amt">−$50.50</div></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <span><svg class="i"><use href="#home"/></svg>Home</span>
+          <span class="on"><svg class="i"><use href="#act"/></svg>Activity</span>
+          <span class="fab"><svg class="i"><use href="#plus"/></svg></span>
+          <span><svg class="i"><use href="#plan"/></svg>Plan</span>
+          <span><svg class="i"><use href="#wallet"/></svg>Wallet</span>
+        </div>
+      </div></div>
+      <p><b style="color:var(--ink)">Activity.</b> Swipe right to categorise, left to mark reviewed. The "To review" tab clears your inbox of odd rows.</p>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="island"></div>
+        <div class="sbar"><span>9:41</span><span>●●●</span></div>
+        <div class="scr-body" style="opacity:.5">
+          <div style="font-weight:700;font-size:16px">Activity</div>
+          <div class="m-card" style="height:80px"></div>
+          <div class="m-card" style="height:120px"></div>
+        </div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="row"><b style="display:flex;align-items:center;gap:6px"><svg class="i" style="color:var(--teal)"><use href="#spark"/></svg>Copilot</b><span class="chip" style="height:20px;font-size:10px">Asks before changing</span></div>
+          <div class="bubble">Remove the duplicate Uber charge from yesterday</div>
+          <div class="ai">I found one match. Nothing changes until you confirm.</div>
+          <div class="action">
+            <div class="hd"><svg class="i" style="width:15px;height:15px"><use href="#trash"/></svg>Delete transaction</div>
+            <div class="bd">
+              <div class="row"><span><b>Uber</b> · Oct 15</span><span class="num" style="font-weight:600">−$5.82</span></div>
+              <div class="row" style="font-size:11px;color:var(--muted)"><span>TD Chequing balance</span><span class="num">$71.80 → $77.62</span></div>
+            </div>
+            <div class="ft"><span>Cancel</span><span class="del">Delete</span></div>
+          </div>
+          <div style="font-size:10.5px;color:var(--faint);text-align:center">You can undo for 30 days from Settings → Trash</div>
+        </div>
+      </div></div>
+      <p><b style="color:var(--ink)">Copilot.</b> AI suggests, you approve. Every change shows its effect on your balance first.</p>
+    </div>
+  </div>
+</section>
+
+<!-- IA -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Navigation</span>
+    <h2>Nine places become five</h2>
+    <p class="muted">The same five sections on web and mobile, so muscle memory carries over. Settings moves under your avatar; the AI lives in the command bar on every screen instead of having a page, a floating button and a sidebar card.</p>
+  </div>
+  <div class="ia">
+    <div class="ia-col">
+      <span class="label">Today</span>
+      <ol>
+        <li>Dashboard</li><li>Accounts &amp; Cards</li><li>Transactions</li><li>Pending Ledger</li><li>Bills &amp; Reminders</li><li>Credit Reports</li><li>Analytics</li><li>AI Financial Copilot</li><li>Settings &amp; Supabase</li>
+      </ol>
+    </div>
+    <svg class="i arrow" style="width:28px;height:28px" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <div class="ia-col new">
+      <span class="label">Redesign</span>
+      <ol>
+        <li><b>Home</b><small>net worth, needs you, runway</small></li>
+        <li><b>Activity</b><small>transactions, pending, review queue</small></li>
+        <li><b>Wallet</b><small>accounts, cards, credit score</small></li>
+        <li><b>Plan</b><small>bills, budgets, runway, debt payoff</small></li>
+        <li><b>Copilot</b><small>⌘K on web, sheet on mobile</small></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Signature components</span>
+    <h2>Six pieces that make it feel like one product</h2>
+    <p class="muted">Each is built once for web and once for mobile against the same tokens, so they behave and look identical.</p>
+  </div>
+  <div class="comps">
+    <div class="comp">
+      <div class="demo"><div class="bsbar"><i style="width:14.2%;background:var(--teal)"></i><i style="flex:1;background:var(--neg);opacity:.85"></i></div><div class="legend"><span>Cash</span><span>Owed</span></div></div>
+      <h3>Balance-sheet bar</h3><p>Assets against debts as one split bar. It shows the size of the gap at a glance, which a single net-worth number can't.</p>
+    </div>
+    <div class="comp">
+      <div class="demo runway"><svg viewBox="0 0 280 56" aria-hidden="true"><path d="M0.0,27.2 L9.3,28.3 L18.7,29.4 L28.0,30.6 L37.3,31.7 L46.7,32.8 L56.0,33.9 L65.3,35.0 L74.7,36.2 L84.0,17.3 L93.3,18.4 L102.7,19.5 L112.0,20.6 L121.3,21.7 L130.7,22.9 L140.0,32.1 L149.3,33.2 L158.7,34.3 L168.0,35.4 L177.3,36.6 L186.7,38.3 L196.0,39.4 L205.3,40.5 L214.7,21.6 L224.0,22.7 L233.3,23.8 L242.7,24.9 L252.0,26.1 L261.3,27.2 L270.7,28.3 L280.0,29.4" fill="none" stroke="var(--teal)" stroke-width="2"/></svg></div>
+      <h3>Cash runway</h3><p>Projected cash for 30 days from paydays and bills. The line turns amber below $500 and red below $0, days before it happens.</p>
+    </div>
+    <div class="comp">
+      <div class="demo" style="flex-direction:row;align-items:center;gap:14px">
+        <svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="23" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="28" cy="28" r="23" fill="none" stroke="var(--warn)" stroke-width="6" stroke-dasharray="108 145" stroke-linecap="round" transform="rotate(-90 28 28)"/></svg>
+        <div><b class="num">75%</b><div style="font-size:12px;color:var(--muted)">Amex Essential · aim under 30%</div></div>
+      </div>
+      <h3>Utilization ring</h3><p>Every card shows how much of its limit you're using, since above 30% hurts a Canadian credit score. Turns amber at 30% and red at 70%.</p>
+    </div>
+    <div class="comp">
+      <div class="demo"><div class="lrow" style="border:0;padding:0"><span class="mono" style="background:#B5577F">T</span><div class="who"><b>Tim Hortons</b><span>Dining · CIBC Visa</span></div><div class="amt">−$4.85</div></div></div>
+      <h3>Ledger row</h3><p>Clean merchant name, a coloured monogram, category and account on one line, amount in mono. Rows group by day with a daily total.</p>
+    </div>
+    <div class="comp">
+      <div class="demo" style="align-items:flex-start"><span class="blurnum">$2,579.77</span><span style="font-size:12px;color:var(--muted)">Hold to reveal</span></div>
+      <h3>Private figure</h3><p>Every money value can blur. Hold (mobile) or hover with ⌥ (web) to peek; it re-blurs after 10 seconds.</p>
+    </div>
+    <div class="comp">
+      <div class="demo"><div class="action" style="background:var(--surface)"><div class="hd" style="padding:6px 10px"><svg class="i" style="width:14px;height:14px"><use href="#trash"/></svg>Delete transaction</div><div class="bd" style="padding:8px 10px"><div class="row" style="font-size:12px"><span>Uber · Oct 15</span><span class="num">−$5.82</span></div></div></div></div>
+      <h3>Proposed action</h3><p>Anything the AI wants to change arrives as a card showing what will happen, with Cancel and Confirm. Nothing runs on its own.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TOKENS -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Design language</span>
+    <h2>Colour and type</h2>
+    <p class="muted">This evolves the Vault palette you already ship rather than replacing it: deeper surfaces, a navy rail as the brand moment, and a single teal accent. Semantic colours only ever mean money in, money out or "look at this".</p>
+  </div>
+  <div class="tokens">
+    <div class="tk l">
+      <b>Light</b>
+      <div class="sw">
+        <div><i style="background:#F3F5F9"></i>Canvas<span>#F3F5F9</span></div>
+        <div><i style="background:#FFFFFF"></i>Surface<span>#FFFFFF</span></div>
+        <div><i style="background:#0E1726"></i>Ink<span>#0E1726</span></div>
+        <div><i style="background:#13294B"></i>Vault<span>#13294B</span></div>
+        <div><i style="background:#0E8A78"></i>Teal<span>#0E8A78</span></div>
+        <div><i style="background:#16835A"></i>In<span>#16835A</span></div>
+        <div><i style="background:#C23A2E"></i>Out<span>#C23A2E</span></div>
+        <div><i style="background:#B8770A"></i>Attention<span>#B8770A</span></div>
+        <div><i style="background:#5A6B80"></i>Muted<span>#5A6B80</span></div>
+        <div><i style="background:#DFE5EE"></i>Line<span>#DFE5EE</span></div>
+      </div>
+    </div>
+    <div class="tk d">
+      <b>Dark</b>
+      <div class="sw">
+        <div><i style="background:#070C15"></i>Canvas<span>#070C15</span></div>
+        <div><i style="background:#0E1522"></i>Surface<span>#0E1522</span></div>
+        <div><i style="background:#E7EEF8"></i>Ink<span>#E7EEF8</span></div>
+        <div><i style="background:#0A1424"></i>Vault<span>#0A1424</span></div>
+        <div><i style="background:#39C9B2"></i>Teal<span>#39C9B2</span></div>
+        <div><i style="background:#4CC38A"></i>In<span>#4CC38A</span></div>
+        <div><i style="background:#F2796C"></i>Out<span>#F2796C</span></div>
+        <div><i style="background:#E8AE45"></i>Attention<span>#E8AE45</span></div>
+        <div><i style="background:#8FA0B7"></i>Muted<span>#8FA0B7</span></div>
+        <div><i style="background:#1F2B3F"></i>Line<span>#1F2B3F</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="type">
+    <div><small>Hero figure · Mono 40/600</small><span class="num" style="font-size:40px;font-weight:600;letter-spacing:-.04em;line-height:1.1">$15,558.16</span></div>
+    <div><small>Page title · Geist 28/700</small><span style="font-size:28px;font-weight:700;letter-spacing:-.03em">Activity</span></div>
+    <div><small>Section · Geist 17/600</small><span style="font-size:17px;font-weight:600">Cash runway</span></div>
+    <div><small>Body · Geist 15/400</small><span>Lowest point $2,081 on Nov 12. You stay above zero for all 30 days.</span></div>
+    <div><small>Label · Geist 11/600 caps</small><span class="label">Owed on 6 cards</span></div>
+    <div><small>Amount · Mono 14/600</small><span class="num" style="font-weight:600">−$4.85 &nbsp; +$751.30</span></div>
+  </div>
+  <p class="note">Geist is clean, slightly technical and free; Geist Mono keeps every digit the same width so columns of money line up. Minimum text size moves from 10 px to 12 px.</p>
+</section>
+
+<!-- MOTION -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Motion &amp; feel</span>
+    <h2>Small, quick and meaningful</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Moment</th><th>Web</th><th>Mobile</th></tr></thead>
+    <tbody>
+      <tr><td>Balance changes</td><td>Digits roll to the new value in 180 ms</td><td>Same, plus a light haptic tick</td></tr>
+      <tr><td>Open a transaction</td><td>Side sheet slides in from the right, list stays visible</td><td>Bottom sheet with spring; swipe down to close</td></tr>
+      <tr><td>Delete</td><td>Row collapses; "Deleted · Undo" toast for 8 s</td><td>Row slides out; success haptic; same undo</td></tr>
+      <tr><td>Unlock</td><td>Passcode screen with the vault dial</td><td>Dial turns during Face ID, opens with a soft haptic</td></tr>
+      <tr><td>Runway load</td><td>Line draws left to right once, on first visit only</td><td>Same</td></tr>
+      <tr><td>Reduced motion</td><td colspan="2">All of the above become instant fades. Haptics stay, since they help orientation.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- STACK -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">How it gets built</span>
+    <h2>One set of tokens, two apps</h2>
+    <p class="muted">A new <code>packages/design-tokens</code> holds every colour, size, radius and motion value in one file. It generates the CSS variables and Tailwind preset for the web, and a theme object for React Native, so the two apps can't drift apart.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Area</th><th>Web (Next.js)</th><th>Mobile (Expo)</th></tr></thead>
+    <tbody>
+      <tr><td>Styling</td><td>Tailwind preset from tokens</td><td>NativeWind v4 with the same preset</td></tr>
+      <tr><td>Primitives</td><td>shadcn/ui on Radix: dialog, sheet, popover, tooltip</td><td>@gorhom/bottom-sheet, react-native-gesture-handler</td></tr>
+      <tr><td>Command / AI</td><td><code>cmdk</code> palette that runs actions</td><td>Copilot sheet from the centre "+" (long-press)</td></tr>
+      <tr><td>Motion</td><td><code>motion</code> (Framer Motion)</td><td>Reanimated 3, <code>expo-haptics</code></td></tr>
+      <tr><td>Charts</td><td>Recharts restyled, sparklines in SVG</td><td><code>victory-native</code> on Skia</td></tr>
+      <tr><td>Long lists</td><td><code>@tanstack/react-virtual</code> for 4,159 rows</td><td>FlashList</td></tr>
+      <tr><td>Data</td><td>TanStack Query (already in place)</td><td>TanStack Query against <code>/api</code> with a bearer session token</td></tr>
+      <tr><td>Security</td><td>Session cookie, idle lock after 10 min</td><td>Face ID via <code>expo-local-authentication</code>, token in <code>expo-secure-store</code></td></tr>
+      <tr><td>Code health</td><td colspan="2">Split <code>transactions/page.tsx</code> (2,754 lines) and <code>analytics/page.tsx</code> (1,608) into small components; plain-language labels throughout</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ROADMAP -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Roadmap</span>
+    <h2>Nine phases, each shippable</h2>
+    <p class="muted">Each phase ends with a working app, so you can stop or reorder at any point. Sizes assume one developer.</p>
+  </div>
+  <div class="road">
+    <div class="ph"><h3><span>P0</span>Foundations</h3><span class="sz">3–4 days</span><p>Design-tokens package, Geist fonts, shadcn/ui primitives, the money-figure, chip and sheet components. No visible change yet, but everything after builds on it.</p></div>
+    <div class="ph"><h3><span>P1</span>New shell and navigation</h3><span class="sz">3 days</span><p>Navy rail with five sections, ⌘K command bar with real actions, avatar menu for settings, mobile-web bottom bar. Old routes redirect to the new ones.</p></div>
+    <div class="ph"><h3><span>P2</span>Home</h3><span class="sz">4 days</span><p>Balance-sheet bar, "Needs you" list, cash runway (needs a small <code>/api/forecast</code> endpoint), card wallet and latest activity.</p></div>
+    <div class="ph"><h3><span>P3</span>Activity</h3><span class="sz">5–6 days</span><p>Rebuild the transactions page as a virtualised ledger grouped by day, with a review queue, inline category editing, a side sheet for details, saved views and undo.</p></div>
+    <div class="ph"><h3><span>P4</span>Wallet</h3><span class="sz">4 days</span><p>Card wallet with utilization rings, account detail with a 90-day balance chart, and the credit score folded in from the old Credit Reports page.</p></div>
+    <div class="ph"><h3><span>P5</span>Plan</h3><span class="sz">5 days</span><p>Bills calendar, monthly budgets per category, the full runway, and a debt payoff planner (avalanche vs snowball) for your $15.6k of card debt.</p></div>
+    <div class="ph"><h3><span>P6</span>Copilot</h3><span class="sz">3 days</span><p>AI moves into the command bar and a side sheet. Every write comes back as a proposed-action card with balance impact and Confirm.</p></div>
+    <div class="ph"><h3><span>P7</span>Mobile rebuild</h3><span class="sz">8–10 days</span><p>Remove the sample data and connect to the real API, then add Face ID lock, NativeWind theme, the four tabs plus "+", bottom sheets, swipe actions and haptics. Dark mode follows the phone.</p></div>
+    <div class="ph"><h3><span>P8</span>Polish and accessibility</h3><span class="sz">3 days</span><p>Empty and error states, skeletons shaped like their content, contrast and keyboard checks, reduced-motion pass, and screenshot tests for both themes.</p></div>
+  </div>
+</section>
+
+</div>

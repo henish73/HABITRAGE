@@ -23,6 +23,8 @@ const ibmPlexMono = IBM_Plex_Mono({
   variable: '--font-mono',
 });
 
+import { AppShell } from '@/components/layout/AppShell';
+
 export const metadata: Metadata = {
   title: 'FinanceOS — Personal Finance Operating System',
   description: 'Personal finance command center for Bank Accounts and Credit Cards in $CAD.',
@@ -40,29 +42,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground flex antialiased" suppressHydrationWarning>
         <Providers>
-          {/* Main Layout Shell */}
-          <div className="flex w-full min-h-screen">
-            {/* Sidebar — hidden on mobile, visible on lg+ */}
-            <div className="hidden lg:block">
-              <Sidebar />
-            </div>
-            <div className="flex-1 flex flex-col min-w-0">
-              <Topbar />
-              <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">
-                {children}
-              </main>
-            </div>
-          </div>
-
-          {/* Mobile bottom navigation */}
-          <MobileNav />
-
-          {/* Global Floating AI Copilot */}
-          <FloatingAiWidget />
-
-          {/* Global Modals */}
-          <PlaidSimulationModal />
-          <CreateTransactionModal />
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>

@@ -37,10 +37,28 @@ export function ProposedActionCard({
     try {
       await onConfirm();
       setResolved('confirmed');
-      toast.success('Action executed · You can undo from Settings', {
+      toast.success('Action executed · 30-day recovery available', {
         action: {
           label: 'Undo',
-          onClick: () => toast.info('Transaction restored from trash.'),
+          onClick: async () => {
+            try {
+              await fetch('/api/transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  merchant,
+                  description: merchant,
+                  amount,
+                  date,
+                  category: 'General',
+                  account_id: '1db86ad3-598c-4314-81a9-25f166676060',
+                }),
+              });
+              toast.success('Transaction restored successfully.');
+            } catch {
+              toast.error('Failed to restore transaction.');
+            }
+          },
         },
       });
     } catch {

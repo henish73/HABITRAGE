@@ -16,12 +16,21 @@ import {
   Snowflake,
 } from 'lucide-react';
 
+import { AddBillDialog } from '@/components/bills/AddBillDialog';
+
 export default function PlanPage() {
   const queryClient = useQueryClient();
   const { isMasked, openAddBill } = useFinanceStore();
 
   const [payoffStrategy, setPayoffStrategy] = useState<'avalanche' | 'snowball'>('avalanche');
   const [extraPayment, setExtraPayment] = useState(250);
+
+  // Dynamic Payoff calculations based on $15,558.16 debt
+  const totalDebt = 15558.16;
+  const baseMonthlyPayment = 420;
+  const totalMonthlyPayment = baseMonthlyPayment + extraPayment;
+  const monthsToPayoff = Math.max(4, Math.ceil(totalDebt / (totalMonthlyPayment * 0.94)));
+  const interestSaved = Math.round(extraPayment * 4.2 * (payoffStrategy === 'avalanche' ? 1.15 : 1.0));
 
   // Fetch Bills
   const { data: billsData } = useQuery({
@@ -32,12 +41,12 @@ export default function PlanPage() {
     },
   });
 
-  const bills = billsData?.bills || [
-    { id: '1', name: 'Rent', amount: 1900.00, next_due_date: '2026-11-01', frequency: 'monthly', is_paid: false, category: 'Rent & Housing' },
-    { id: '2', name: 'Rogers Wireless', amount: 85.00, next_due_date: '2026-11-02', frequency: 'monthly', is_paid: false, category: 'Utilities & Phone' },
-    { id: '3', name: 'Disney+', amount: 14.99, next_due_date: '2026-11-12', frequency: 'monthly', is_paid: false, category: 'Entertainment' },
-    { id: '4', name: 'Car Insurance', amount: 165.00, next_due_date: '2026-11-15', frequency: 'monthly', is_paid: false, category: 'Insurance' },
+  const bills = (billsData?.bills && billsData.bills.length > 0) ? billsData.bills : [
+    { id: '1', name: 'Disney+', amount: 14.99, next_due_date: '2026-11-12', frequency: 'monthly', is_paid: false, category: 'Entertainment' },
+    { id: '2', name: 'Amex Essential Min Payment', amount: 29.00, next_due_date: '2026-10-28', frequency: 'monthly', is_paid: false, category: 'Credit Card' },
+    { id: '3', name: 'CIBC Dividend Min Payment', amount: 62.11, next_due_date: '2026-10-21', frequency: 'monthly', is_paid: false, category: 'Credit Card' },
   ];
+
 
   const handleMarkPaid = async (billId: string) => {
     try {
@@ -127,19 +136,19 @@ export default function PlanPage() {
         {/* Strategy Breakdown Card */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
           <div className="p-4 rounded-xl bg-[var(--raised)] border border-[var(--line-soft)]">
-            <span className="text-xs text-[var(--muted-color)] block">Debt-Free Date</span>
+            <span className="text-xs text-[var(--muted-color)] block">Debt-Free Projection</span>
             <b className="text-lg font-mono text-[var(--ink)] block mt-0.5">
-              {payoffStrategy === 'avalanche' ? 'August 2027 (10 mos)' : 'October 2027 (12 mos)'}
+              {monthsToPayoff} months
             </b>
             <small className="text-[11px] text-[var(--teal)]">
-              {payoffStrategy === 'avalanche' ? '2 months faster' : 'Maximum momentum'}
+              {payoffStrategy === 'avalanche' ? 'Prioritizing highest interest' : 'Prioritizing smallest balances'}
             </small>
           </div>
 
           <div className="p-4 rounded-xl bg-[var(--raised)] border border-[var(--line-soft)]">
-            <span className="text-xs text-[var(--muted-color)] block">Total Interest Saved</span>
+            <span className="text-xs text-[var(--muted-color)] block">Estimated Interest Saved</span>
             <b className="text-lg font-mono text-[var(--pos)] block mt-0.5">
-              {payoffStrategy === 'avalanche' ? '$1,420.50 saved' : '$980.20 saved'}
+              +{formatCAD(interestSaved)} saved
             </b>
             <small className="text-[11px] text-[var(--muted-color)]">
               vs minimum monthly payments
@@ -271,6 +280,7 @@ export default function PlanPage() {
           </div>
         </div>
       </div>
+      <AddBillDialog />
     </div>
   );
 }

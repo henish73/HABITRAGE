@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { useFinanceStore } from '@/lib/store';
 import { formatCAD, cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
@@ -23,129 +24,164 @@ interface DayGroup {
   items: ActivityItem[];
 }
 
+function getBadge(merchant: string, category: string) {
+  const m = (merchant || '').trim().toUpperCase();
+  let char = m[0] || '•';
+  if (category?.toLowerCase().includes('transfer') || m.includes('TRANSFER')) char = '⇄';
+  else if (category?.toLowerCase().includes('fee') || m.includes('FEE')) char = '$';
+
+  const colors = ['#2F6BB3', '#B5577F', '#14968A', '#8C7B55', '#7A5BB5', '#2B5C8A', '#2C7A4B', '#9B2F2F'];
+  let hash = 0;
+  for (let i = 0; i < m.length; i++) hash = m.charCodeAt(i) + ((hash << 5) - hash);
+  const color = colors[Math.abs(hash) % colors.length];
+  return { char, color };
+}
+
 export function LatestActivityWidget() {
   const { isMasked } = useFinanceStore();
 
-  const groups: DayGroup[] = [
-    {
-      dateLabel: 'Today · Oct 16',
-      netLabel: '+$596.45',
-      isPositiveNet: true,
-      items: [
-        {
-          id: '1',
-          monogram: 'G',
-          color: '#2F6BB3',
-          merchant: 'Garda Canada',
-          details: 'Payroll · CIBC Smart',
-          amount: 751.30,
-          isInflow: true,
-        },
-        {
-          id: '2',
-          monogram: 'T',
-          color: '#B5577F',
-          merchant: 'Tim Hortons',
-          details: 'Dining · CIBC Dividend Visa',
-          amount: -4.85,
-        },
-        {
-          id: '3',
-          monogram: '⇄',
-          color: '#5B7088',
-          merchant: 'Transfer to card',
-          details: 'Transfers · CIBC Smart',
-          amount: -150.00,
-        },
-      ],
+  const { data: txData } = useQuery({
+    queryKey: ['transactions', 'latest'],
+    queryFn: async () => {
+      const res = await fetch('/api/transactions?limit=6&sort_by=date&sort_order=desc');
+      return res.json();
     },
-    {
-      dateLabel: 'Oct 15',
-      netLabel: '−$61.32',
-      isPositiveNet: false,
-      items: [
+  });
+
+  const rawTxs: any[] = txData?.transactions || [];
+
+  // Group transactions by date
+  const groups: DayGroup[] = React.useMemo(() => {
+    if (!rawTxs || rawTxs.length === 0) {
+      return [
         {
-          id: '4',
-          monogram: 'U',
-          color: '#14968A',
-          merchant: 'Uber',
-          details: 'Rideshare · TD Chequing',
-          amount: -5.82,
+          dateLabel: 'Oct 16',
+          netLabel: '+$596.45',
+          isPositiveNet: true,
+          items: [
+            { id: '1', monogram: 'G', color: '#2F6BB3', merchant: 'Garda Canada', details: 'Payroll · CIBC Smart', amount: 751.30, isInflow: true },
+            { id: '2', monogram: 'T', color: '#B5577F', merchant: 'Tim Hortons', details: 'Dining · CIBC Dividend Visa', amount: -4.85 },
+            { id: '3', monogram: '⇄', color: '#5B7088', merchant: 'Transfer to card', details: 'Transfers · CIBC Smart', amount: -150.00 },
+          ],
         },
         {
-          id: '5',
-          monogram: '$',
-          color: '#8C7B55',
-          merchant: 'TD monthly fee',
-          details: 'Bank fees · TD Chequing',
-          amount: -5.00,
+          dateLabel: 'Oct 15',
+          netLabel: '−$61.32',
+          isPositiveNet: false,
+          items: [
+            { id: '4', monogram: 'U', color: '#14968A', merchant: 'Uber', details: 'Rideshare · TD Chequing', amount: -5.82 },
+            { id: '5', monogram: '$', color: '#8C7B55', merchant: 'TD monthly fee', details: 'Bank fees · TD Chequing', amount: -5.00 },
+          ],
         },
-      ],
-    },
-  ];
+      ];
+    }
+
+    const map = new Map<string, any[]>();
+    for (const tx of rawTxs) {
+      const dateKey = tx.date;
+      if (!map.has(dateKey)) map.set(dateKey, []);
+      map.get(dateKey)!.push(tx);
+    }
+
+    const res: DayGroup[] = [];
+    for (const [dateStr, txs] of map.entries()) {
+      let dailySum = 0;
+      const items: ActivityItem[] = txs.map((t) => {
+        dailySum += t.amount;
+        const { char, color } = getBadge(t.merchant || t.description, t.category);
+        return {
+          id: t.id,
+          monogram: char,
+          color,
+          merchant: t.merchant || t.description,
+          details: `${t.category || 'General'}`,
+          amount: t.amount,
+          isInflow: t.amount > 0,
+        };
+      });
+
+      const isPositive = dailySum >= 0;
+      const netLabel = isPositive ? `+${formatCAD(dailySum)}` : formatCAD(dailySum);
+
+      const d = new Date(dateStr);
+      const dateLabel = isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      res.push({
+        dateLabel,
+        netLabel,
+        isPositiveNet: isPositive,
+        items,
+      });
+    }
+
+    return res.slice(0, 3);
+  }, [rawTxs]);
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-vault min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-1">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-color)]">
           Latest activity
         </span>
         <Link
           href="/activity"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--teal)] hover:opacity-80 transition-opacity"
+          className="text-xs font-semibold text-[var(--teal)] hover:opacity-80 inline-flex items-center gap-1 transition-opacity"
         >
           <span>See all</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      {/* Ledger Grouped by Day */}
-      <div className="flex flex-col divide-y divide-[var(--line-soft)]">
-        {groups.map((group) => (
-          <div key={group.dateLabel} className="pt-2 first:pt-0">
-            {/* Day Header */}
-            <div className="flex justify-between items-center text-[11px] uppercase tracking-wider font-semibold text-[var(--faint)] py-1.5">
+      {/* Ledger Rows */}
+      <div className="flex flex-col">
+        {groups.map((group, gIdx) => (
+          <div key={group.dateLabel || gIdx}>
+            {/* Day Header Divider */}
+            <div className="flex items-center justify-between py-2 text-[11px] font-semibold tracking-wider uppercase text-[var(--faint)]">
               <span>{group.dateLabel}</span>
               <span className={cn(
-                "font-mono font-semibold",
-                group.isPositiveNet ? "text-[var(--pos)]" : "text-[var(--ink)]",
+                "font-mono font-medium",
+                group.isPositiveNet ? "text-[var(--pos)]" : "text-[var(--muted-color)]",
                 isMasked && "blurnum"
               )}>
                 {group.netLabel}
               </span>
             </div>
 
-            {/* Rows */}
+            {/* Transactions in Day */}
             <div className="flex flex-col">
               {group.items.map((item) => (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[32px_1fr_auto] gap-3 items-center py-2"
+                  className="grid grid-cols-[32px_1fr_auto] gap-3 items-center py-2 border-t border-[var(--line-soft)]"
                 >
+                  {/* Monogram Avatar */}
                   <span
-                    className="w-8 h-8 rounded-[10px] grid place-items-center font-bold text-xs text-white shrink-0 shadow-xs"
-                    style={{ background: item.color }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0"
+                    style={{ backgroundColor: item.color }}
                   >
                     {item.monogram}
                   </span>
 
-                  <div className="min-w-0 pr-2">
-                    <b className="block text-xs font-semibold text-[var(--ink)] truncate">
+                  {/* Merchant & Context */}
+                  <div className="min-w-0 pr-1">
+                    <b className="block text-xs sm:text-[13px] font-semibold text-[var(--ink)] truncate">
                       {item.merchant}
                     </b>
-                    <span className="block text-[11.5px] text-[var(--muted-color)] truncate">
+                    <span className="block text-[11px] text-[var(--muted-color)] truncate">
                       {item.details}
                     </span>
                   </div>
 
+                  {/* Mono Amount */}
                   <div className="text-right">
                     <span className={cn(
-                      "font-mono font-semibold text-xs",
+                      "font-mono font-semibold text-xs sm:text-sm",
                       item.isInflow ? "text-[var(--pos)]" : "text-[var(--ink)]",
                       isMasked && "blurnum"
                     )}>
-                      {item.amount > 0 ? `+${formatCAD(item.amount)}` : `−${formatCAD(Math.abs(item.amount))}`}
+                      {item.isInflow ? `+${formatCAD(item.amount)}` : formatCAD(item.amount)}
                     </span>
                   </div>
                 </div>

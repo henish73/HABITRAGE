@@ -17,6 +17,9 @@ interface FinanceState {
   isAddTransactionOpen: boolean;
   openAddTransaction: () => void;
   closeAddTransaction: () => void;
+  isAddBillOpen: boolean;
+  openAddBill: () => void;
+  closeAddBill: () => void;
 }
 
 export const useFinanceStore = create<FinanceState>((set) => ({
@@ -36,6 +39,9 @@ export const useFinanceStore = create<FinanceState>((set) => ({
   isAddTransactionOpen: false,
   openAddTransaction: () => set({ isAddTransactionOpen: true }),
   closeAddTransaction: () => set({ isAddTransactionOpen: false }),
+  isAddBillOpen: false,
+  openAddBill: () => set({ isAddBillOpen: true }),
+  closeAddBill: () => set({ isAddBillOpen: false }),
 }));
 
 export const usePrivacyStore = useFinanceStore;

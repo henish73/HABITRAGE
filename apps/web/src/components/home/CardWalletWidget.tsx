@@ -2,11 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { useFinanceStore } from '@/lib/store';
 import { formatCAD, cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 
 interface CardItem {
+  id: string;
   name: string;
   gradientClass: string;
   balance: number;
@@ -18,8 +20,39 @@ interface CardItem {
 export function CardWalletWidget() {
   const { isMasked } = useFinanceStore();
 
-  const cards: CardItem[] = [
+  const { data: accountsData } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => {
+      const res = await fetch('/api/accounts');
+      return res.json();
+    },
+  });
+
+  const rawCards = (accountsData?.accounts || []).filter((a: any) => a.type === 'credit_card');
+
+  const cards: CardItem[] = rawCards.length > 0 ? rawCards.slice(0, 4).map((c: any) => {
+    const isAmexEssential = c.account_name.toLowerCase().includes('essential');
+    const isTD = c.bank_name.toLowerCase().includes('td');
+    const isAmexGreen = c.account_name.toLowerCase().includes('green');
+    const isRog = c.bank_name.toLowerCase().includes('rogers');
+
+    const gradientClass = isAmexEssential ? 'amexE' : isTD ? 'td' : isAmexGreen ? 'amexG' : isRog ? 'rog' : 'cibc';
+    const limit = c.credit_limit || 1000;
+    const balance = c.balance || 0;
+    const utilization = limit > 0 ? Math.round((Math.max(0, balance) / limit) * 100) : 0;
+
+    return {
+      id: c.id,
+      name: c.account_name.replace('American Express', 'Amex').replace('Credit Card', ''),
+      gradientClass,
+      balance,
+      limit,
+      utilization,
+      warn: utilization >= 70,
+    };
+  }) : [
     {
+      id: '1',
       name: 'Amex Essential',
       gradientClass: 'amexE',
       balance: 10145.23,
@@ -28,6 +61,7 @@ export function CardWalletWidget() {
       warn: true,
     },
     {
+      id: '2',
       name: 'TD Low Rate Visa',
       gradientClass: 'td',
       balance: 709.86,
@@ -36,6 +70,7 @@ export function CardWalletWidget() {
       warn: true,
     },
     {
+      id: '3',
       name: 'Amex Green',
       gradientClass: 'amexG',
       balance: 4595.92,
@@ -43,6 +78,7 @@ export function CardWalletWidget() {
       utilization: 54,
     },
     {
+      id: '4',
       name: 'Rogers Mastercard',
       gradientClass: 'rog',
       balance: 75.71,
@@ -51,6 +87,8 @@ export function CardWalletWidget() {
     },
   ];
 
+  const totalLimit = cards.reduce((sum, c) => sum + c.limit, 0);
+
   return (
     <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-vault min-w-0">
       {/* Header */}
@@ -58,54 +96,58 @@ export function CardWalletWidget() {
         <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-color)]">
           Card wallet
         </span>
-        <Link
-          href="/wallet"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--teal)] hover:opacity-80 transition-opacity"
-        >
-          <span>6 cards · $28,100 limit</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
+        <span className="text-xs font-mono text-[var(--muted-color)]">
+          {cards.length} cards · {formatCAD(totalLimit)} limit
+        </span>
       </div>
 
-      {/* 2x2 Responsive Card Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {cards.map((card) => {
-          const isOver30 = card.utilization >= 30;
-          const barColor = card.utilization >= 70 ? '#F6C564' : card.utilization >= 30 ? '#F6C564' : '#FFFFFF';
+      {/* Realistic 2x2 Card Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {cards.map((card) => (
+          <div
+            key={card.id || card.name}
+            className={`ccard ${card.gradientClass} p-3 sm:p-3.5 flex flex-col justify-between rounded-xl relative overflow-hidden`}
+          >
+            {/* Card name */}
+            <span className="text-xs font-semibold text-white/95 truncate block">
+              {card.name}
+            </span>
 
-          return (
-            <div
-              key={card.name}
-              className={cn("ccard", card.gradientClass)}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11.5px] font-semibold tracking-tight text-white/95">
-                  {card.name}
-                </span>
-                {isOver30 && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="Utilization above 30%" />
-                )}
-              </div>
-
-              <div className={cn("text-[17px] font-mono font-semibold text-white tracking-tight my-1", isMasked && "blurnum")}>
+            {/* Balance & Utilization */}
+            <div className="mt-2.5">
+              <span className={cn(
+                "font-mono font-bold text-sm sm:text-base text-white block",
+                isMasked && "blurnum"
+              )}>
                 {formatCAD(card.balance)}
-              </div>
+              </span>
 
-              <div className="flex items-center gap-2 text-[10.5px] font-mono text-white/90">
-                <i className="flex-1 h-1 rounded-full bg-white/25 overflow-hidden block">
-                  <b
+              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-white/90">
+                <div className="flex-1 h-1 rounded-full bg-white/20 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
                     style={{
                       width: `${Math.min(card.utilization, 100)}%`,
-                      background: barColor,
+                      backgroundColor: card.warn ? '#F6C564' : '#FFFFFF',
                     }}
-                    className="block h-full rounded-full transition-all duration-300"
                   />
-                </i>
-                <span>{card.utilization}%</span>
+                </div>
+                <span className="font-mono font-semibold">{card.utilization}%</span>
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer Link */}
+      <div className="mt-3 pt-2.5 border-t border-[var(--line-soft)] flex justify-end">
+        <Link
+          href="/wallet"
+          className="text-xs font-semibold text-[var(--teal)] hover:opacity-80 inline-flex items-center gap-1 transition-opacity"
+        >
+          <span>View all {rawCards.length || 6} cards &amp; limits</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
     </div>
   );

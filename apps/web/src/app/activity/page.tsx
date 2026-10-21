@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFinanceStore } from '@/lib/store';
 import { Transaction, formatCAD } from '@financeos/shared';
@@ -39,22 +40,35 @@ function getMerchantBadge(merchant: string, category: string) {
   return { char, color };
 }
 
-export default function ActivityPage() {
+function ActivityContent() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const { isMasked } = useFinanceStore();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'review' | 'pending'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const querySearch = searchParams.get('search') || '';
+  const queryTab = searchParams.get('tab');
+  const initialTab = (queryTab === 'pending' || queryTab === 'review') ? queryTab : 'all';
+
+  const [activeTab, setActiveTab] = useState<'all' | 'review' | 'pending'>(initialTab);
+  const [searchQuery, setSearchQuery] = useState(querySearch);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [limit, setLimit] = useState(500);
+
+  // Sync state if URL search query changes
+  useEffect(() => {
+    if (querySearch) setSearchQuery(querySearch);
+    if (queryTab === 'pending' || queryTab === 'review') setActiveTab(queryTab);
+  }, [querySearch, queryTab]);
 
   // Fetch transactions from API
   const { data: txData, isLoading } = useQuery({
-    queryKey: ['transactions', 'activity'],
+    queryKey: ['transactions', 'activity', limit],
     queryFn: async () => {
-      const res = await fetch('/api/transactions?limit=250&sort_by=date&sort_order=desc');
+      const res = await fetch(`/api/transactions?limit=${limit}&sort_by=date&sort_order=desc`);
       return res.json();
     },
   });
+
 
   // Fetch accounts to map account names
   const { data: accountsData } = useQuery({
@@ -338,10 +352,19 @@ export default function ActivityPage() {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
           }}
           onDelete={() => {
+            setSelectedTx(null);
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
           }}
         />
       )}
     </div>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[var(--muted-color)] text-sm">Loading activity ledger...</div>}>
+      <ActivityContent />
+    </Suspense>
   );
 }

@@ -5,12 +5,13 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow static Next.js assets, favicon, login page, and auth APIs
+  const isStaticFile = /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|map|txt)$/i.test(pathname);
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname === '/login' ||
     pathname === '/favicon.ico' ||
-    pathname.includes('.')
+    isStaticFile
   ) {
     return NextResponse.next();
   }

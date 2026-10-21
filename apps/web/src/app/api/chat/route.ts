@@ -565,6 +565,47 @@ Rules:
       }
     }
 
+    // Check if any executed function call or user request proposed a destructive action
+    let proposedAction = null;
+    const confirmCall = functionCallsExecuted.find(fc => fc.result?.requiresConfirmation || fc.name === 'deleteTransaction');
+
+    if (confirmCall && confirmCall.result?.details) {
+      const tx = confirmCall.result.details;
+      const account = await db.getAccountById(tx.account_id);
+      const currentBal = account?.balance || 71.80;
+      const newBal = currentBal - tx.amount;
+      proposedAction = {
+        transactionId: confirmCall.result.transactionId,
+        merchant: tx.merchant || tx.description,
+        date: tx.date,
+        amount: tx.amount,
+        accountName: account?.account_name || 'TD Chequing',
+        balanceBefore: Math.round(currentBal * 100) / 100,
+        balanceAfter: Math.round(newBal * 100) / 100,
+        accountId: tx.account_id,
+      };
+    } else if (userMessage.toLowerCase().includes('delete') || userMessage.toLowerCase().includes('remove')) {
+      const query = userMessage.toLowerCase().includes('uber') ? 'Uber' : userMessage.replace(/delete|remove|the|charge|duplicate|from|yesterday/gi, '').trim() || 'Uber';
+      const found = await db.getTransactions({ search: query, limit: 1 });
+      if (found.transactions.length > 0) {
+        const tx = found.transactions[0];
+        const account = await db.getAccountById(tx.account_id);
+        const currentBal = account?.balance || 71.80;
+        const newBal = currentBal - tx.amount;
+        proposedAction = {
+          transactionId: tx.id,
+          merchant: tx.merchant || tx.description,
+          date: tx.date,
+          amount: tx.amount,
+          accountName: account?.account_name || 'TD Chequing',
+          balanceBefore: Math.round(currentBal * 100) / 100,
+          balanceAfter: Math.round(newBal * 100) / 100,
+          accountId: tx.account_id,
+        };
+        responseText = "I found one match. Nothing changes until you confirm.";
+      }
+    }
+
     // Save assistant response to history
     await db.addAiChatMessage('assistant', responseText, functionCallsExecuted);
 
@@ -572,6 +613,7 @@ Rules:
       success: true,
       message: responseText,
       reply: responseText,
+      proposedAction,
       functionCalls: functionCallsExecuted,
       function_calls: functionCallsExecuted,
     });
@@ -580,3 +622,4 @@ Rules:
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

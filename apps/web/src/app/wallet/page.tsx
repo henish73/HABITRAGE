@@ -26,7 +26,53 @@ export default function WalletPage() {
     },
   });
 
-  const cards = [
+  const rawAccounts: any[] = accountsData?.accounts || [];
+  const rawBankAccounts = rawAccounts.filter((a) => a.type === 'bank');
+  const rawCards = rawAccounts.filter((a) => a.type === 'credit_card');
+
+  const bankAccounts = rawBankAccounts.length > 0 ? rawBankAccounts.map((a) => ({
+    name: a.account_name,
+    bank: a.bank_name,
+    type: a.account_type || 'Chequing',
+    balance: a.balance || 0,
+    number: a.account_number || '****',
+  })) : [
+    { name: 'CIBC Smart Account', bank: 'CIBC', type: 'Chequing', balance: 2138.00, number: '****7339' },
+    { name: 'TD Every Day Chequing', bank: 'TD', type: 'Chequing', balance: 71.80, number: '****7089' },
+    { name: 'RBC Day to Day Banking Chequing', bank: 'RBC', type: 'Chequing', balance: 0.09, number: '****7173' },
+    { name: 'CIBC eAdvantage Savings', bank: 'CIBC', type: 'Savings', balance: 0.00, number: '****5832' },
+    { name: 'TD High Interest Savings', bank: 'TD', type: 'Savings', balance: 0.00, number: '****9086' },
+    { name: 'RBC High Interest eSavings', bank: 'RBC', type: 'Savings', balance: 0.00, number: '****7181' },
+    { name: 'RBC NOMI Find & Save', bank: 'RBC', type: 'Savings', balance: 0.00, number: '****9475' },
+  ];
+
+  const cards = rawCards.length > 0 ? rawCards.map((c) => {
+    const isAmexEssential = c.account_name.toLowerCase().includes('essential');
+    const isAmexGreen = c.account_name.toLowerCase().includes('green');
+    const isTD = c.bank_name.toLowerCase().includes('td');
+    const isRog = c.bank_name.toLowerCase().includes('rogers');
+    const isCIBC = c.bank_name.toLowerCase().includes('cibc');
+    const isSimplyCash = c.account_name.toLowerCase().includes('simplycash');
+
+    const gradientClass = isAmexEssential ? 'amexE' : isTD ? 'td' : isAmexGreen ? 'amexG' : isRog ? 'rog' : isCIBC ? 'cibc' : 'amexB';
+    const limit = c.credit_limit || 1000;
+    const balance = c.balance || 0;
+    const utilization = limit > 0 ? Math.round((Math.max(0, balance) / limit) * 100) : 0;
+    const apr = isAmexGreen ? 'N/A (Charge)' : isAmexEssential ? '12.99%' : isTD ? '11.99%' : isRog ? '19.99%' : '20.99%';
+    const dueDate = c.due_date ? `Due ${c.due_date.slice(5)}` : balance < 0 ? 'Credit Balance' : 'Nov 12';
+
+    return {
+      id: c.id,
+      name: c.account_name,
+      shortName: c.account_name.replace('American Express', 'Amex'),
+      gradientClass,
+      balance,
+      limit,
+      utilization,
+      apr,
+      dueDate,
+    };
+  }) : [
     {
       id: 'amex-essential',
       name: 'American Express Essential Credit Card',
@@ -57,8 +103,8 @@ export default function WalletPage() {
       balance: 4595.92,
       limit: 8500,
       utilization: 54,
-      apr: '20.99%',
-      dueDate: 'Nov 8',
+      apr: 'N/A (Charge)',
+      dueDate: 'Oct 28',
     },
     {
       id: 'rogers-mc',
@@ -80,7 +126,7 @@ export default function WalletPage() {
       limit: 3500,
       utilization: 1,
       apr: '20.99%',
-      dueDate: 'Nov 12',
+      dueDate: 'Oct 21',
     },
     {
       id: 'amex-simplycash',
@@ -95,15 +141,6 @@ export default function WalletPage() {
     },
   ];
 
-  const bankAccounts = [
-    { name: 'CIBC Smart Account', bank: 'CIBC', type: 'Chequing', balance: 2138.00, number: '****7339' },
-    { name: 'TD Every Day Chequing', bank: 'TD', type: 'Chequing', balance: 71.80, number: '****1029' },
-    { name: 'RBC Day to Day Banking Chequing', bank: 'RBC', type: 'Chequing', balance: 0.09, number: '****4401' },
-    { name: 'CIBC eAdvantage Savings', bank: 'CIBC', type: 'Savings', balance: 0.00, number: '****8812' },
-    { name: 'TD High Interest Savings', bank: 'TD', type: 'Savings', balance: 0.00, number: '****5520' },
-    { name: 'RBC High Interest eSavings', bank: 'RBC', type: 'Savings', balance: 0.00, number: '****9930' },
-    { name: 'RBC NOMI Find & Save', bank: 'RBC', type: 'Savings', balance: 0.00, number: '****6210' },
-  ];
 
   const totalBankCash = bankAccounts.reduce((sum, a) => sum + Math.max(0, a.balance), 0);
   const totalCardDebt = cards.reduce((sum, c) => sum + (c.balance > 0 ? c.balance : 0), 0);

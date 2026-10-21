@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinanceOS 2.0 Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column; findings as a ranked ledger, plan as a phase timeline. Vault 2.0 tokens. */
+:root{
+  --canvas:#F3F5F9; --surface:#FFFFFF; --raised:#F8FAFC; --line:#DFE5EE; --line-soft:#EAEFF5;
+  --ink:#0E1726; --muted:#5A6B80; --faint:#8A99AD;
+  --teal:#0E8A78; --teal-soft:#E0F2EE;
+  --pos:#16835A; --neg:#C23A2E; --warn:#B8770A; --info:#2D5FA8;
+  --pos-soft:#E2F2EA; --neg-soft:#FBE8E5; --warn-soft:#FBF0DA; --info-soft:#E4ECF8;
+  --ui:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --num:"Geist Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45; --info:#7FA8EC;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D; --info-soft:#152238;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45; --info:#7FA8EC;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D; --info-soft:#152238;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--ui);font-size:15.5px;line-height:1.6;
+  padding:48px max(16px,env(safe-area-inset-right,0px)) 96px max(16px,env(safe-area-inset-left,0px))}
+.page{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:64px}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.02em}
+h1{font-size:clamp(32px,5vw,52px);line-height:1.05;font-weight:800;letter-spacing:-.04em}
+h2{font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-.03em}
+h3{font-size:16px;font-weight:600}
+p{margin:0;max-width:68ch}
+code{font-family:var(--num);font-size:.86em;background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:1px 5px;word-break:break-word}
+.eyebrow{font-family:var(--num);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.lede{font-size:17px;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.strip>div{padding:16px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.strip>div:last-child{border-right:0}
+.strip .k{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.strip .v{font-family:var(--num);font-size:26px;font-weight:600}
+.strip .s{font-size:13px;color:var(--muted)}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .warn{color:var(--warn)}
+
+.ok{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.ok ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 20px;font-size:14.5px}
+.ok li{display:flex;gap:8px}
+.ok li::before{content:"✓";color:var(--pos);font-weight:700}
+
+.group{display:flex;flex-direction:column;gap:10px}
+.group>h3{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.f{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:14px 18px;border-top:1px solid var(--line-soft)}
+.f:first-child{border-top:0}
+.f>div{min-width:0}
+.f .n{font-family:var(--num);font-size:12px;font-weight:600;width:28px;height:28px;border-radius:8px;display:grid;place-items:center}
+.f p{font-size:14px;color:var(--muted);margin-top:2px}
+.f .where{font-family:var(--num);font-size:11.5px;color:var(--faint);margin-top:4px;word-break:break-all}
+.c .n{background:var(--neg-soft);color:var(--neg)}
+.h .n{background:var(--warn-soft);color:var(--warn)}
+.m .n{background:var(--info-soft);color:var(--info)}
+
+.road{display:flex;flex-direction:column;border-left:2px solid var(--line);margin-left:9px}
+.ph{position:relative;padding:0 0 30px 30px;display:flex;flex-direction:column;gap:8px}
+.ph::before{content:"";position:absolute;left:-9px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--canvas);border:2px solid var(--teal)}
+.ph:last-child{padding-bottom:0}
+.ph .hd{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.ph .hd span{font-family:var(--num);font-size:12px;color:var(--muted)}
+.ph h3 b{font-family:var(--num);color:var(--teal);margin-right:8px;font-size:13px}
+.ph ul{margin:0;padding-left:18px;color:var(--muted);font-size:14.5px;display:flex;flex-direction:column;gap:4px}
+.ph ul b{color:var(--ink);font-weight:600}
+.note{font-size:13.5px;color:var(--muted)}
+@media (max-width:600px){.strip>div{border-right:0;border-top:1px solid var(--line)}.strip>div:first-child{border-top:0}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header style="display:flex;flex-direction:column;gap:12px">
+  <span class="eyebrow">FinanceOS 2.0 · Review · 21 Oct 2026</span>
+  <h1>The new design looks right. Much of it isn't connected yet.</h1>
+  <p class="lede">I checked the code, ran the tests and type-check, and clicked through every page in light mode, dark mode and at phone width. The look matches the redesign plan. The main gaps are hard-coded data, features lost in the rewrite, and a mobile app that can't reach the API.</p>
+</header>
+
+<div class="strip">
+  <div><span class="k">Tests</span><span class="v pos">50 / 50</span><span class="s">all passing</span></div>
+  <div><span class="k">Type errors</span><span class="v neg">1</span><span class="s">Add Bill does nothing</span></div>
+  <div><span class="k">Hard-coded widgets</span><span class="v warn">7</span><span class="s">Home, Wallet, Plan</span></div>
+  <div><span class="k">Transactions loaded</span><span class="v">250</span><span class="s">of 4,159</span></div>
+</div>
+
+<section>
+  <span class="eyebrow">Working</span>
+  <div class="ok"><ul>
+    <li>Login is required for every page and API call</li>
+    <li>Five-section navigation; old addresses redirect</li>
+    <li>Light, dark and phone layouts, no sideways scroll</li>
+    <li>Net-worth card uses real balances</li>
+    <li>Bills list on Plan shows your real bills</li>
+    <li>Privacy blur works on money figures</li>
+  </ul></div>
+</section>
+
+<section>
+  <span class="eyebrow">Findings</span>
+  <h2>What needs fixing</h2>
+
+  <div class="group"><h3>Broken</h3><div class="list">
+    <div class="f h"><span class="n">1</span><div><b>"Add Bill" does nothing</b><p>The Plan page calls <code>openAddBill</code>, which doesn't exist in the store. It's also the one type-check error.</p><div class="where">app/plan/page.tsx:21</div></div></div>
+    <div class="f h"><span class="n">2</span><div><b>Search and the Pending link are ignored</b><p>Top-bar search opens <code>/activity?search=…</code>, but the page never reads it and shows everything. The old Pending link (<code>?tab=pending</code>) is ignored the same way.</p><div class="where">app/activity/page.tsx</div></div></div>
+    <div class="f m"><span class="n">3</span><div><b>Login page shows the whole app</b><p>The sidebar, top bar and Copilot button appear before you've signed in.</p><div class="where">app/layout.tsx</div></div></div>
+    <div class="f m"><span class="n">4</span><div><b>Copilot button covers the Wallet tab on phones</b><p>The floating button sits on top of the bottom tab bar.</p><div class="where">components/ai/FloatingAiWidget.tsx</div></div></div>
+  </div></div>
+
+  <div class="group"><h3>Hard-coded data shown as real</h3><div class="list">
+    <div class="f c"><span class="n">5</span><div><b>Home is frozen</b><p>"Needs you", the cash runway (it reuses the illustrative line from the mockup), the card wallet and "Latest activity" are static. Home will show "Today · Oct 16" forever, and the review count is always 14.</p><div class="where">components/home/*.tsx</div></div></div>
+    <div class="f c"><span class="n">6</span><div><b>Wallet ignores your accounts</b><p>It fetches <code>/api/accounts</code> and then uses typed-in balances, limits, due dates and account numbers. Several numbers are wrong (TD ****1029 instead of ****7089). The APRs and the TransUnion score of 724 are invented, and Amex Green is shown at 20.99% APR, though it's a charge card with no interest rate.</p><div class="where">app/wallet/page.tsx</div></div></div>
+    <div class="f c"><span class="n">7</span><div><b>Plan numbers are made up</b><p>Debt-free dates, "interest saved" and every budget figure are fixed values. The extra-payment slider changes nothing. If the bills request fails, it shows invented bills (Rent $1,900, Car Insurance). "AI Optimized" and "Synced 2 min ago" are only labels.</p><div class="where">app/plan/page.tsx · components/layout/Topbar.tsx</div></div></div>
+  </div></div>
+
+  <div class="group"><h3>Copilot safety</h3><div class="list">
+    <div class="f c"><span class="n">8</span><div><b>The confirmation card never appears</b><p><code>/api/chat</code> never returns the <code>proposedAction</code> the card needs. If incomplete data arrives, the card shows placeholder details ("Uber, $5.82, TD Chequing") while Confirm deletes whatever transaction ID was sent. It also reports success without checking the response.</p><div class="where">components/ai/FloatingAiWidget.tsx:185 · app/api/chat/route.ts</div></div></div>
+    <div class="f c"><span class="n">9</span><div><b>"Undo" is fake</b><p>There's no trash. The button shows "Transaction restored", and nothing comes back.</p><div class="where">components/copilot/ProposedActionCard.tsx:40</div></div></div>
+  </div></div>
+
+  <div class="group"><h3>Lost in the rewrite</h3><div class="list">
+    <div class="f h"><span class="n">10</span><div><b>Activity covers only the latest 250 transactions</b><p>Search only looks at those 250. There's no paging, filtering (date, account, category, amount, type), sorting, bulk edit or delete, CSV import or category management.</p><div class="where">app/activity/page.tsx:54</div></div></div>
+    <div class="f h"><span class="n">11</span><div><b>Other features removed</b><p>The analytics charts, adding or editing accounts, account balance charts, credit report upload and bill editing.</p><div class="where">old pages now redirect</div></div></div>
+  </div></div>
+
+  <div class="group"><h3>Mobile app</h3><div class="list">
+    <div class="f c"><span class="n">12</span><div><b>Always shows built-in sample data</b><p>The API now needs a login, so every request gets a 401 and the app silently falls back to its sample data. The server address <code>10.0.2.2</code> only works on the Android emulator.</p><div class="where">apps/mobile/src/lib/api.ts</div></div></div>
+    <div class="f m"><span class="n">13</span><div><b>Design tokens aren't used</b><p>Neither app imports <code>packages/design-tokens</code>, so colors are still defined in several places.</p><div class="where">apps/web/tailwind.config.ts · apps/mobile</div></div></div>
+  </div></div>
+
+  <div class="group"><h3>Security</h3><div class="list">
+    <div class="f c"><span class="n">14</span><div><b>Logins can be forged</b><p><code>AUTH_SECRET</code> isn't set, so session cookies are signed with the default key written in the source.</p><div class="where">apps/web/src/lib/auth.ts:3 · .env.local</div></div></div>
+    <div class="f h"><span class="n">15</span><div><b>Any address with a "." skips the login check</b><p>The middleware lets through every path containing a dot.</p><div class="where">apps/web/src/middleware.ts:13</div></div></div>
+    <div class="f m"><span class="n">16</span><div><b>No limit on passcode guesses</b><p>The login endpoint accepts unlimited attempts and compares the passcode with a plain string check.</p><div class="where">app/api/auth/login/route.ts</div></div></div>
+  </div></div>
+</section>
+
+<section>
+  <span class="eyebrow">Plan</span>
+  <h2>Seven phases to finish 2.0</h2>
+  <p class="note">Each phase ends with a working app. Sizes assume one developer.</p>
+  <div class="road">
+    <div class="ph"><div class="hd"><h3><b>1</b>Fix what's broken</h3><span>about 1 day</span></div><ul>
+      <li>A real <b>Add bill</b> form</li>
+      <li>Activity reads <code>?search=</code> and <code>?tab=</code></li>
+      <li>Login page without the app shell</li>
+      <li>Copilot button above the phone tab bar</li>
+      <li>Close the transaction panel after a delete; show "$0.00" instead of "−$0.00"</li>
+    </ul></div>
+    <div class="ph"><div class="hd"><h3><b>2</b>Connect real data</h3><span>3–4 days</span></div><ul>
+      <li><b>Home:</b> "Needs you" from card usage, the review rule and the next bill; runway from a new <code>/api/forecast</code>; latest activity from the API</li>
+      <li><b>Wallet:</b> from <code>/api/accounts</code>, with APR, statement day and due day stored per account</li>
+      <li><b>Credit score:</b> only from an uploaded report, otherwise an empty state</li>
+      <li><b>Plan:</b> payoff calculated from real balances and APRs, so the slider works; a budgets table with this month's real spending</li>
+      <li>Remove the fallback bills, "AI Optimized" and "Synced 2 min ago"</li>
+    </ul></div>
+    <div class="ph"><div class="hd"><h3><b>3</b>Bring back lost features</h3><span>4–5 days</span></div><ul>
+      <li><b>Activity:</b> server-side search and paging (or a virtual list) across all transactions; filters for date, account, category, amount and type; bulk recategorize or delete; CSV import; inline category edit; category management</li>
+      <li><b>Wallet:</b> add, edit and delete accounts; account detail with a balance chart; credit report upload</li>
+      <li><b>Plan:</b> an Insights tab with the old cash-flow, category and top-merchant charts</li>
+    </ul></div>
+    <div class="ph"><div class="hd"><h3><b>4</b>Make Copilot actually safe</h3><span>2 days</span></div><ul>
+      <li><code>/api/chat</code> returns a structured action with the real transaction and balance effect</li>
+      <li>No placeholder values on the card; check the response before showing success</li>
+      <li>Real trash (soft delete plus restore) so Undo works, or remove the button</li>
+    </ul></div>
+    <div class="ph"><div class="hd"><h3><b>5</b>Mobile</h3><span>5–7 days</span></div><ul>
+      <li>Login screen; store the session token securely and send it with each request</li>
+      <li>Server address from config, so iPhones and real devices work</li>
+      <li>Replace sample data with the last real sync and an "Offline · last synced …" banner</li>
+      <li>Shared design tokens, the phone's dark mode, Face ID</li>
+    </ul></div>
+    <div class="ph"><div class="hd"><h3><b>6</b>Security</h3><span>half a day</span></div><ul>
+      <li>Require <code>AUTH_SECRET</code> at startup</li>
+      <li>Close the "." bypass in the middleware</li>
+      <li>Limit login attempts; compare passcodes in constant time</li>
+    </ul></div>
+    <div class="ph"><div class="hd"><h3><b>7</b>Keep it from breaking again</h3><span>1–2 days</span></div><ul>
+      <li>Feed <code>design-tokens</code> into the Tailwind config and the mobile theme</li>
+      <li>Tests for the forecast and payoff math</li>
+      <li>A browser smoke test for each page</li>
+      <li>Run <code>next build</code> before each commit, which would have caught the <code>openAddBill</code> error</li>
+    </ul></div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
