@@ -1,0 +1,345 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>FinanceOS Audit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap">
+<style>
+/* Layout: one reading column, ledger-style tables, the page itself wears the proposed "Vault" theme. */
+:root{
+  --bg:#F5F7FA; --surface:#FFFFFF; --sunk:#EDF1F6; --line:#DCE3EC;
+  --fg:#0F1B2D; --muted:#56657A;
+  --navy:#16325C; --accent:#0F7B6C; --accent-soft:#E2F3EF;
+  --pos:#1D7F55; --neg:#C2362C; --warn:#B77406; --info:#2D5FA8;
+  --pos-soft:#E3F3EA; --neg-soft:#FBE7E4; --warn-soft:#FBF0DC; --info-soft:#E4ECF8;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B111C; --surface:#121A28; --sunk:#0E1522; --line:#22304A;
+  --fg:#E6EDF7; --muted:#93A3BA;
+  --navy:#9DB8E6; --accent:#3CC4AE; --accent-soft:#12302C;
+  --pos:#4CC38A; --neg:#F07468; --warn:#E5A93A; --info:#7FA8EC;
+  --pos-soft:#11291F; --neg-soft:#331816; --warn-soft:#31240E; --info-soft:#152238;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B111C; --surface:#121A28; --sunk:#0E1522; --line:#22304A;
+  --fg:#E6EDF7; --muted:#93A3BA;
+  --navy:#9DB8E6; --accent:#3CC4AE; --accent-soft:#12302C;
+  --pos:#4CC38A; --neg:#F07468; --warn:#E5A93A; --info:#7FA8EC;
+  --pos-soft:#11291F; --neg-soft:#331816; --warn-soft:#31240E; --info-soft:#152238;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{text-wrap:balance;margin:0}
+h1{font-family:var(--display);font-size:clamp(30px,5vw,44px);line-height:1.1;color:var(--navy)}
+h2{font-family:var(--display);font-size:26px;color:var(--navy);margin-bottom:6px}
+h3{font-size:16px;font-weight:600}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{color:var(--muted);font-size:16px;margin-top:10px}
+section{display:flex;flex-direction:column;gap:16px}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--sunk);padding:1px 5px;border-radius:4px;border:1px solid var(--line);word-break:break-word}
+a{color:var(--accent)}
+.num{font-variant-numeric:tabular-nums;font-family:var(--mono)}
+
+/* summary strip */
+.ledger{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.ledger>div{padding:16px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.ledger>div:last-child{border-right:0}
+.ledger .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ledger .v{font-family:var(--mono);font-size:26px;font-weight:600}
+.ledger .s{font-size:13px;color:var(--muted)}
+
+/* callout */
+.alert{border:1px solid var(--neg);background:var(--neg-soft);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.alert strong{color:var(--neg)}
+.alert ol{margin:0;padding-left:20px}
+
+/* findings */
+.findings{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.f{display:grid;grid-template-columns:92px 1fr;gap:14px;padding:14px 18px;border-top:1px solid var(--line)}
+.f:first-child{border-top:0}
+.f>div{min-width:0}
+.f p{color:var(--muted);font-size:14px;margin-top:3px}
+.f .where{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;word-break:break-all}
+.sev{align-self:start;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;text-align:center;border:1px solid}
+.sev.c{color:var(--neg);background:var(--neg-soft);border-color:var(--neg)}
+.sev.h{color:var(--warn);background:var(--warn-soft);border-color:var(--warn)}
+.sev.m{color:var(--info);background:var(--info-soft);border-color:var(--info)}
+.sev.u{color:var(--accent);background:var(--accent-soft);border-color:var(--accent)}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th,td{padding:9px 14px;text-align:left;border-top:1px solid var(--line);vertical-align:top}
+th{border-top:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--sunk)}
+td.r,th.r{text-align:right}
+.neg{color:var(--neg)} .pos{color:var(--pos)}
+
+/* theme preview */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.sw{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);font-size:13px}
+.sw i{display:block;height:44px}
+.sw div{padding:8px 10px;display:flex;flex-direction:column}
+.sw span{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.mock{border:1px solid var(--line);border-radius:12px;background:var(--sunk);padding:18px;display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+.mock .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.mock .big{font-family:var(--mono);font-size:30px;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--muted);width:max-content}
+.chip.safe{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.chip.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.meter{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
+.meter b{display:block;height:100%}
+.row{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.row .num{white-space:nowrap}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.box ul{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px}
+.box ul b{color:var(--fg);font-weight:600}
+pre{margin:0;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.55}
+.steps{counter-reset:s;display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}
+.steps li::before{content:counter(s);font-family:var(--mono);font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:28px;height:28px;display:grid;place-items:center;font-size:13px}
+.steps li p{color:var(--muted);font-size:14px}
+@media (max-width:620px){.f{grid-template-columns:1fr;gap:6px}.sev{justify-self:start}.mock{grid-template-columns:1fr}.ledger>div{border-right:0;border-top:1px solid var(--line)}.ledger>div:first-child{border-top:0}}
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:8px">
+  <span class="eyebrow">Code audit · 21 Oct 2026 · apps/web + packages</span>
+  <h1>FinanceOS audit: bugs, tests and a safer look</h1>
+  <p class="lede">I read the Next.js app, the API routes, the shared math and the data layer, ran 49 new automated tests against a copy of your real ledger, and clicked through every page in the running app. This page lists what's broken, in priority order, and what to build next.</p>
+</header>
+
+<div class="ledger">
+  <div><span class="k">Tests written</span><span class="v num">49</span><span class="s">shared math + data layer</span></div>
+  <div><span class="k">Failing</span><span class="v num neg">26</span><span class="s">each one is a real bug</span></div>
+  <div><span class="k">Net worth shown</span><span class="v num neg">−$13,686.71</span><span class="s">becomes +$989.75 after any edit</span></div>
+  <div><span class="k">Dashboard payload</span><span class="v num">4.5 MB</span><span class="s">downloaded on every visit</span></div>
+</div>
+
+<div class="alert">
+  <strong>Do these two things today, before anything else.</strong>
+  <ol>
+    <li><b>Revoke your OpenRouter API key</b> in the OpenRouter dashboard and create a new one. The current key is hard-coded in <code>apps/web/src/app/settings/page.tsx</code> (lines 125 and 131), so every visitor's browser receives it. A second copy sits in the plain-text file <code>txt</code> at the repo root. Neither <code>.dockerignore</code> nor <code>.gcloudignore</code> excludes <code>txt</code> or <code>.env</code>, so both also go to Cloud Build.</li>
+    <li><b>Don't deploy the app publicly yet.</b> No API route checks who is calling. Your Dockerfile targets Cloud Run, so anyone with the URL could read, export or delete your whole ledger and spend your AI credits.</li>
+  </ol>
+</div>
+
+<section>
+  <span class="eyebrow">The headline bug</span>
+  <h2>Credit card balances flip sign on any edit</h2>
+  <p>The seed stores card balances as debt (positive means you owe money), using the running balance from your statements. But <code>recalculateAccountBalances</code> (<code>packages/db/src/client.ts:667</code>) restarts every account at $0 and adds signed amounts the way a bank account works. As soon as you add, edit or delete one transaction on a card, its debt goes negative and <code>calculateNetWorth</code> drops it with <code>Math.max(0, …)</code>. Two cards have already been hit.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Account</th><th class="r">Stored now</th><th class="r">After one edit</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>TD Low Rate Visa</td><td class="r num">$709.86</td><td class="r num neg">−$709.86</td><td>will flip</td></tr>
+      <tr><td>Amex Essential</td><td class="r num">$10,145.23</td><td class="r num neg">−$10,145.23</td><td>will flip</td></tr>
+      <tr><td>Amex Green</td><td class="r num">$4,595.92</td><td class="r num">$966.66</td><td>opening balance lost</td></tr>
+      <tr><td>Rogers Mastercard</td><td class="r num">$75.71</td><td class="r num neg">−$75.71</td><td>will flip</td></tr>
+      <tr><td>CIBC Dividend Visa</td><td class="r num neg">−$31.44</td><td class="r num neg">−$31.44</td><td><b class="neg">already corrupted</b></td></tr>
+      <tr><td>CIBC eAdvantage Savings</td><td class="r num">$0.00</td><td class="r num">$116.40</td><td>stored and computed disagree</td></tr>
+      <tr><td><b>Total card debt</b></td><td class="r num"><b>$15,896.60</b></td><td class="r num"><b>$1,336.54</b></td><td>about $14.5k of debt disappears</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Fix:</b> store an opening balance per account, recalculate as <code>opening + Σ(amount × sign)</code> where the sign is −1 for cards, then run a one-off repair over the stored data. The test <code>adding a $10 charge to a credit card INCREASES the debt by $10</code> checks this.</p>
+</section>
+
+<section>
+  <span class="eyebrow">All findings</span>
+  <h2>Bugs, ranked</h2>
+  <div class="findings">
+    <div class="f"><span class="sev c">Critical</span><div><h3>API key exposed in browser code</h3><p>See the box above. Move the key server-side, show only a masked "key configured ✓" in Settings, and delete <code>txt</code>.</p><div class="where">app/settings/page.tsx:125 · txt</div></div></div>
+    <div class="f"><span class="sev c">Critical</span><div><h3>No authentication anywhere</h3><p>Every route under <code>/api</code> is open, including bulk delete, export and the AI agent. Add Supabase Auth (already in your stack) plus a <code>middleware.ts</code> that blocks unsigned requests.</p><div class="where">apps/web/src/app/api/**</div></div></div>
+    <div class="f"><span class="sev c">Critical</span><div><h3>Balance engine wrong for cards and opening balances</h3><p>Explained above. It affects net worth, the accounts page, the AI's answers and the utilization numbers.</p><div class="where">packages/db/src/client.ts:667 · packages/shared/src/utils.ts:43</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>SQL injection in categories</h3><p>With Postgres on, <code>createCategory</code> pastes <code>color</code> and <code>icon</code> straight into <code>$executeRawUnsafe</code>, and <code>deleteCategory</code> does the same with the id. Use Prisma's normal <code>category.create</code> / <code>deleteMany</code>.</p><div class="where">packages/db/src/client.ts:908, 979</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>Two databases that drift apart</h3><p>Reads always come from <code>data/seed_cache.json</code>. Postgres only receives some transaction writes: never accounts, bills or reports, and never the recalculated running balances of other rows. Errors are logged and swallowed. Make Postgres the only source of truth and keep the JSON file as an offline fallback only.</p><div class="where">packages/db/src/client.ts</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>The JSON store loses data under load and in production</h3><p>Every change rewrites the whole 3.4 MB file. Importing 500 CSV rows means 500 full rewrites and 500 recalculations. Two requests at once can overwrite each other. In Docker the <code>data</code> folder belongs to root while the app runs as <code>nextjs</code>, so writes fail silently, and Cloud Run wipes the disk on restart anyway.</p><div class="where">client.ts:108 · Dockerfile:47</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>The AI can delete a transaction from a vague phrase</h3><p><code>deleteTransaction</code> with a <code>query</code> deletes the newest search match with no confirmation ("delete my Uber" removes whichever Uber row sorts first). <code>updateTransaction</code> passes the model's raw arguments into the DB. Return a proposed action and ask the user to confirm it in the UI first.</p><div class="where">app/api/chat/route.ts:270–295</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>Bills: wrong dates and payments that fail</h3><p>Paying a bill due Jan 31 jumps to <b>Mar 3</b>. Weekly and biweekly bills move a whole month. Auto-generated card bills can't be paid (the API returns 404); all five of yours have been dismissed, which fits. Dates are hard-coded to <code>2026-10-</code> and <code>2026-11-</code>. The AI offers an <code>annual</code> frequency the schema rejects. Rent payments are filed as "Housing &amp; Rent" instead of "Rent &amp; Housing".</p><div class="where">client.ts:707, 776–805 · chat/route.ts:126, 314</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>CSV import corrupts data</h3><p>Lines are split on every comma, so <code>"UBER, TORONTO"</code> shifts the columns. Dates like <code>10/16/2026</code> are stored as-is and break sorting and filters. Amounts such as <code>$1,250.00</code> become 0. A header containing "name" (like "Account Name") is taken as the description. Re-importing a file creates duplicates. Use a real CSV parser (you already depend on <code>csv-parser</code>), normalize dates, and skip duplicates by date + amount + description.</p><div class="where">app/api/import/route.ts</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>Updates accept any field</h3><p>The PUT routes for transactions, accounts and bills spread the raw request body, so a client can overwrite <code>id</code>, <code>balance</code> or <code>running_balance</code>. Creating an account isn't validated at all. Run every body through the zod schemas you already have.</p><div class="where">api/transactions/[id] · api/accounts · api/bills/[id]</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Moving a transaction to another account leaves both balances wrong</h3><p>Balances are only recalculated when amount, date or status change, not when <code>account_id</code> changes.</p><div class="where">client.ts:436</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Income and spending are inflated by transfers</h3><p>Totals, the dashboard cards and the AI summary count transfers between your own accounts and card payments as both income and spending (651 transfer rows). The dashboard also shows made-up fallback figures ($2,850 / $1,740) when data is empty.</p><div class="where">client.ts:326 · app/page.tsx:342, 372</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Deletes report success when nothing was deleted</h3><p>Deleting a missing transaction returns 200. Deleting an account leaves its bills pointing at nothing.</p><div class="where">client.ts:162, 484</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>CSV export can run formulas in Excel</h3><p>A description starting with <code>=</code>, <code>+</code>, <code>-</code> or <code>@</code> runs as a formula when the file is opened. Category values aren't quote-escaped. Export stops silently at 10,000 rows.</p><div class="where">app/api/export/route.ts</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Validation gaps</h3><p>The date regex accepts <code>2026-13-45</code>. Amounts accept <code>Infinity</code>. A negative <code>page</code> returns rows from the wrong end. <code>limit</code> has no upper bound.</p><div class="where">packages/shared/src/schemas.ts · api/transactions/route.ts</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Auto-categorization false positives</h3><p>Keyword matching is substring-based: "PA<b>RENT</b> TEACHER" and "CUR<b>RENT</b> ACCOUNT" become Rent, "VE<b>GAS</b>" becomes Gas, "CAMP<b>BELL</b>" becomes Phone, "<b>METRO</b>NOME" becomes Groceries. Match whole words and let rules learned from your manual edits take priority.</p><div class="where">packages/shared/src/utils.ts:120</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Data quality</h3><p>10 "Inflow" rows have negative amounts and 10 "Outflow" rows have positive ones. Same-day transactions ignore <code>created_at</code>, so their running balances can come out in the wrong order (the README says otherwise). Sums can print as "−$0.00".</p><div class="where">data/seed_cache.json · utils.ts:76</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Every page load wipes service workers and caches</h3><p>The inline script in <code>layout.tsx</code> unregisters every service worker and deletes every cache on each visit, which rules out offline/PWA support.</p><div class="where">app/layout.tsx:30</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>No version control</h3><p><code>D:\Habitrage</code> isn't a git repository. Run <code>git init</code> and make a first commit (with <code>.env</code>, <code>txt</code> and <code>data/seed_cache.json</code> git-ignored) before changing anything, so every fix can be rolled back.</p><div class="where">repo root</div></div></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Frontend</span>
+  <h2>UI problems I saw in the running app</h2>
+  <div class="findings">
+    <div class="f"><span class="sev h">High</span><div><h3>Unusable on a phone</h3><p>The sidebar is a fixed 256 px. At 375 px wide it takes two-thirds of the screen and the transactions table is cut off. Add a bottom tab bar on mobile and hide the sidebar below <code>lg</code>.</p><div class="where">components/layout/Sidebar.tsx:56 · app/layout.tsx</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>Hard-coded numbers that look real</h3><p>A green "+4.2% MoM" badge sits next to a <b>negative</b> net worth. "4,158 Transactions Indexed", "7 Bank Accounts &amp; 6 Credit Cards" and the bills header "Includes Rent ($1,900)…" (shown over a $14.99 total) are all fixed text. In a finance app, made-up numbers destroy trust. Compute them or remove them.</p><div class="where">NetWorthCard.tsx:34 · app/page.tsx:117 · bills/page.tsx · Topbar/Sidebar copy</div></div></div>
+    <div class="f"><span class="sev h">High</span><div><h3>Settings is unreadable in dark mode</h3><p>Settings, Assistant and Credit Reports use literal <code>bg-white</code> / <code>text-slate-900</code>, so the "System Settings" heading disappears on the dark background and the cards glare white. Use the theme tokens (<code>bg-card</code>, <code>text-foreground</code>).</p><div class="where">settings/page.tsx · assistant/page.tsx · credit-reports/page.tsx</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>Privacy mask hides almost nothing</h3><p>"Masked" only hides account numbers. Balances, net worth and amounts stay visible, although the README promises they're hidden. Make the mask blur every money figure, so you can open the app in public.</p><div class="where">lib/store.ts · every component using formatCAD</div></div></div>
+    <div class="f"><span class="sev m">Medium</span><div><h3>The dashboard downloads your whole ledger</h3><p><code>/api/transactions?limit=5000</code> sends 4.5 MB to the browser so charts can be computed client-side. Add a <code>/api/summary</code> endpoint that returns the monthly totals and top categories (a few KB).</p><div class="where">app/page.tsx:47</div></div></div>
+    <div class="f"><span class="sev u">UX</span><div><h3>Jargon and tiny text</h3><p>The transactions page (2,754 lines in one file) uses labels like "Mesh Filters", "Temporal Window", "Magnitude Filter", "Audit Mode" and "Node". People think "Filters", "Date range", "Amount", "Review mode", "Account". Most labels are 10–11 px. Use 13 px minimum for labels and 14–15 px for body text.</p><div class="where">app/transactions/page.tsx</div></div></div>
+    <div class="f"><span class="sev u">UX</span><div><h3>Red and green carry meaning alone</h3><p>Inflow and outflow differ only by color, which fails for colour-blind users. Always pair the color with a sign (+/−) or an arrow icon.</p><div class="where">RecentTransactions, tables, charts</div></div></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Theme proposal</span>
+  <h2>"Vault": a palette that reads as safe</h2>
+  <p>The current theme is near-black with an electric blue. That works for a dev tool, but money apps earn trust by feeling calm and deliberate. Vault uses a deep navy for structure (banks have used it for a century), a teal-green accent that suggests "protected" and "OK", and an amber warning used sparingly. Positive and negative are a muted green and brick red, so they don't shout. The page you're reading uses the palette in both light and dark mode; switch your system theme to compare.</p>
+
+  <div class="swatches">
+    <div class="sw"><i style="background:var(--navy)"></i><div><b>Navy</b><span>#16325C · structure</span></div></div>
+    <div class="sw"><i style="background:var(--accent)"></i><div><b>Vault teal</b><span>#0F7B6C · actions, safe</span></div></div>
+    <div class="sw"><i style="background:var(--pos)"></i><div><b>Inflow</b><span>#1D7F55</span></div></div>
+    <div class="sw"><i style="background:var(--neg)"></i><div><b>Outflow / debt</b><span>#C2362C</span></div></div>
+    <div class="sw"><i style="background:var(--warn)"></i><div><b>Warning</b><span>#B77406 · due, high use</span></div></div>
+    <div class="sw"><i style="background:var(--bg)"></i><div><b>Canvas</b><span>#F5F7FA / #0B111C</span></div></div>
+  </div>
+
+  <div class="mock" aria-label="Dashboard preview in the Vault theme">
+    <div class="card">
+      <div class="row"><span class="eyebrow" style="color:var(--muted)">Net worth · CAD</span><span class="chip safe">● Synced 2 min ago</span></div>
+      <div class="big neg">−$13,686.71</div>
+      <div class="row"><span style="color:var(--muted)">Cash in banks</span><span class="num">$2,209.89</span></div>
+      <div class="row"><span style="color:var(--muted)">Card debt</span><span class="num neg">−$15,896.60</span></div>
+      <span class="chip" style="margin-top:4px">No month-over-month figure yet: needs balance history</span>
+    </div>
+    <div class="card">
+      <div class="row"><b>Card utilization</b><span class="chip warn">2 cards above 30%</span></div>
+      <div class="row"><span>TD Low Rate Visa</span><span class="num">71%</span></div>
+      <div class="meter"><b style="width:71%;background:var(--warn)"></b></div>
+      <div class="row"><span>Amex Essential</span><span class="num">75%</span></div>
+      <div class="meter"><b style="width:75%;background:var(--warn)"></b></div>
+      <div class="row"><span>CIBC Dividend Visa</span><span class="num">1%</span></div>
+      <div class="meter"><b style="width:2%;background:var(--accent)"></b></div>
+    </div>
+  </div>
+  <p style="font-size:14px;color:var(--muted)">Mock-up using your real balances. Utilization above 30% hurts a Canadian credit score, so the app should flag it.</p>
+
+  <h3>Drop-in tokens for <code>apps/web/src/app/globals.css</code></h3>
+  <pre>:root {                          /* Vault · light */
+  --background: 216 33% 97%;   --foreground: 216 50% 12%;
+  --card: 0 0% 100%;           --card-foreground: 216 50% 12%;
+  --popover: 0 0% 100%;        --popover-foreground: 216 50% 12%;
+  --primary: 215 61% 22%;      --primary-foreground: 0 0% 100%;   /* navy */
+  --secondary: 214 32% 94%;    --secondary-foreground: 215 17% 40%;
+  --muted: 214 32% 94%;        --muted-foreground: 215 17% 40%;
+  --accent: 172 78% 27%;       --accent-foreground: 0 0% 100%;    /* vault teal */
+  --positive: 154 63% 31%;     --negative: 4 63% 47%;
+  --destructive: 4 63% 47%;    --warning: 37 94% 37%;
+  --border: 214 28% 89%;       --input: 214 28% 89%;   --ring: 172 78% 27%;
+  --chart-1: 215 61% 32%; --chart-2: 172 78% 32%; --chart-3: 37 94% 45%;
+  --chart-4: 4 63% 52%;   --chart-5: 262 35% 55%;
+}
+.dark {                          /* Vault · dark */
+  --background: 218 43% 8%;    --foreground: 215 47% 94%;
+  --card: 218 38% 11%;         --card-foreground: 215 47% 94%;
+  --popover: 218 38% 13%;      --popover-foreground: 215 47% 94%;
+  --primary: 217 60% 76%;      --primary-foreground: 218 43% 8%;
+  --secondary: 218 36% 17%;    --secondary-foreground: 215 22% 66%;
+  --muted: 218 36% 15%;        --muted-foreground: 215 22% 66%;
+  --accent: 170 55% 50%;       --accent-foreground: 218 43% 8%;
+  --positive: 151 50% 53%;     --negative: 5 82% 68%;
+  --destructive: 5 82% 68%;    --warning: 38 77% 56%;
+  --border: 218 37% 21%;       --input: 218 37% 21%;   --ring: 170 55% 50%;
+}</pre>
+  <p style="font-size:14px;color:var(--muted)">Also swap Inter for <b>IBM Plex Sans</b> with <b>IBM Plex Mono</b> for every money figure. Mono digits line up in columns, look precise, and make changed numbers easy to spot. Then replace the scattered literal <code>emerald-600</code>, <code>rose-600</code> and <code>blue-600</code> classes with <code>text-positive</code>, <code>text-destructive</code> and <code>text-accent</code>, so the theme applies everywhere.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Making it feel safe</span>
+  <h2>UX patterns that build trust</h2>
+  <div class="cols">
+    <div class="box"><h3>Safety cues</h3><ul>
+      <li><b>Masked by default</b>, hold the eye icon to peek, re-mask after 30 s</li>
+      <li><b>Auto-lock</b> after 10 minutes idle (PIN or passkey)</li>
+      <li><b>"Last synced" timestamp</b> on every balance</li>
+      <li><b>Activity log</b>: who changed what, when, and from what value</li>
+      <li>Security chips only when true, e.g. "Signed in · this device"</li>
+    </ul></div>
+    <div class="box"><h3>Safe destructive actions</h3><ul>
+      <li><b>Undo toast</b> (8 s) instead of instant deletes</li>
+      <li>Bulk deletes ask you to type the count ("Delete 42")</li>
+      <li>AI actions show a <b>preview card</b> you approve before anything changes</li>
+      <li>Soft-delete with a 30-day trash</li>
+    </ul></div>
+    <div class="box"><h3>Faster everyday use</h3><ul>
+      <li><b>⌘K command palette</b> that runs actions ("add expense", "go to TD Visa"), not just search</li>
+      <li>Shortcuts: <code>N</code> new, <code>/</code> search, <code>J</code>/<code>K</code> move rows, <code>E</code> edit</li>
+      <li>Inline editing of category and amount, saved instantly</li>
+      <li><b>Saved views</b> ("Uncategorized this month", "Large outflows")</li>
+      <li>Mobile bottom tabs and a floating "+" button</li>
+    </ul></div>
+    <div class="box"><h3>Modern polish</h3><ul>
+      <li>Sparkline of the 90-day balance on each account card</li>
+      <li>Skeletons the same shape as the content they replace</li>
+      <li>Number transitions of 150 ms when values change (off for reduced motion)</li>
+      <li>Empty states that suggest the next step ("Import a CSV")</li>
+      <li>Comfortable/compact density toggle for the table</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Features to add</span>
+  <h2>What would make it more useful</h2>
+  <div class="cols">
+    <div class="box"><h3>Debt and credit</h3><ul>
+      <li><b>Debt payoff planner</b> (avalanche vs snowball) for your $15.9k across 6 cards</li>
+      <li><b>Utilization alerts</b> per card at 30% and 70%</li>
+      <li>Statement-date aware "pay before" reminders</li>
+    </ul></div>
+    <div class="box"><h3>Planning</h3><ul>
+      <li><b>Monthly budgets</b> per category with progress bars</li>
+      <li><b>30-day cash-flow forecast</b> from payroll + bills</li>
+      <li>Savings goals with target dates</li>
+    </ul></div>
+    <div class="box"><h3>Automation</h3><ul>
+      <li><b>Subscription detector</b>: find recurring charges like Disney+ automatically</li>
+      <li>Categorization rules learned from your edits</li>
+      <li>Duplicate detection on import; OFX/QFX support</li>
+      <li>Monthly PDF/email report</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Tests</span>
+  <h2>What I added and how to run it</h2>
+  <p>No test framework was installed, so the tests use Node's built-in runner through the <code>tsx</code> you already have. Nothing new was installed. The data-layer tests copy <code>seed_cache.json</code> to a temp folder and disable Postgres, so your real ledger is never touched.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>File</th><th>Covers</th><th class="r">Pass</th><th class="r">Fail</th></tr></thead>
+    <tbody>
+      <tr><td><code>packages/shared/src/__tests__/utils.test.ts</code></td><td>formatting, net worth, running balances, categorizer, schemas</td><td class="r num pos">18</td><td class="r num neg">13</td></tr>
+      <tr><td><code>packages/db/src/__tests__/client.test.ts</code></td><td>balances, pending, deletes, moves, bills, categories, SQL safety</td><td class="r num pos">5</td><td class="r num neg">13</td></tr>
+    </tbody>
+  </table></div>
+  <pre>pnpm test</pre>
+  <p style="font-size:14px;color:var(--muted)">The failing tests describe correct behaviour, so they'll pass as each bug is fixed. I didn't change any app code. Besides the two test files, I only added a <code>test</code> script to the root and <code>packages/db</code> <code>package.json</code>, plus <code>.claude/launch.json</code>.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Suggested order</span>
+  <h2>Plan</h2>
+  <ol class="steps">
+    <li><div><h3>Revoke the key, remove it from source, delete <code>txt</code></h3><p>Then add <code>txt</code>, <code>.env*</code> and <code>data/</code> to both ignore files.</p></div></li>
+    <li><div><h3><code>git init</code> and a first commit</h3><p>So every later step can be reviewed and rolled back.</p></div></li>
+    <li><div><h3>Fix the balance engine and repair stored balances</h3><p>Opening balances, a per-type sign, a move-between-accounts recalc, then a one-off repair script.</p></div></li>
+    <li><div><h3>Harden the API</h3><p>Zod on every body, parameterized SQL, real 404s, a CSV parser, export escaping, AI actions that need confirmation.</p></div></li>
+    <li><div><h3>Add authentication, then use Postgres as the only store</h3><p>Supabase Auth + middleware; the JSON file becomes an offline cache only.</p></div></li>
+    <li><div><h3>UI pass</h3><p>Vault tokens, mobile nav, dark-mode fixes, a real privacy mask, a summary endpoint, plain-language labels, no fake numbers.</p></div></li>
+    <li><div><h3>New features</h3><p>Utilization alerts and the debt planner first, since they matter most for the current balances.</p></div></li>
+  </ol>
+</section>
+
+</div>
+
+</body></html>

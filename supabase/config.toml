@@ -1,0 +1,16 @@
+project_id = "financeos"
+
+[api]
+port = 54321
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true

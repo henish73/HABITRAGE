@@ -1,0 +1,80 @@
+import { NextResponse } from 'next/server';
+import { db } from '@financeos/db';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const account = await db.getAccountById(id);
+    if (!account) {
+      return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 });
+    }
+
+    // Get transactions for this account
+    const txData = await db.getTransactions({
+      account_ids: [id],
+      limit: 1000,
+      sort_by: 'date',
+      sort_order: 'asc',
+    });
+
+    // Build balance trend line
+    const balanceTrend = txData.transactions
+      .filter((t) => t.status === 'posted' && t.running_balance !== null)
+      .map((t) => ({
+        date: t.date,
+        balance: t.running_balance,
+        amount: t.amount,
+      }));
+
+    return NextResponse.json({
+      success: true,
+      account,
+      balanceTrend,
+      transactionCount: txData.total,
+      recentTransactions: txData.transactions.slice(-20).reverse(),
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const updated = await db.updateAccount(id, body);
+    if (!updated) {
+      return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, account: updated });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const deleted = await db.deleteAccount(id);
+    if (!deleted) {
+      return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, message: 'Account deleted' });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

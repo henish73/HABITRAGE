@@ -14,6 +14,15 @@ dist/
 !.env.example
 txt
 
+# Raw statements and private financial documents
+datasets_financial_mesh/
+data/*.csv
+*.csv
+*.xlsx
+*.pdf
+*.zip
+Transactions-With-Type-V3.csv
+
 # Local data cache
 data/seed_cache.json
 

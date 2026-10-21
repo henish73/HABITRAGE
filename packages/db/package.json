@@ -1,0 +1,25 @@
+{
+  "name": "@financeos/db",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "build": "tsc",
+    "seed": "tsx src/seed.ts",
+    "db:push": "prisma db push",
+    "test": "node --import tsx --test \"src/__tests__/*.test.ts\" \"../shared/src/__tests__/*.test.ts\""
+  },
+  "dependencies": {
+    "@financeos/shared": "workspace:*",
+    "@prisma/client": "^6.4.1",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "prisma": "^6.4.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

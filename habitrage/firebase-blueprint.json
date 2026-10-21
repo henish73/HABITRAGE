@@ -1,0 +1,235 @@
+{
+  "entities": {
+    "VaultSettings": {
+      "title": "Vault Settings",
+      "description": "Encrypted API keys and model preferences.",
+      "type": "object",
+      "properties": {
+        "openRouterKeyEncrypted": { "type": "string", "description": "AES-GCM encrypted base64 string" },
+        "defaultModel": { "type": "string" },
+        "pillarModelMap": {
+          "type": "object",
+          "properties": {
+            "finance": { "type": "string" },
+            "habits": { "type": "string" },
+            "health": { "type": "string" },
+            "journal": { "type": "string" },
+            "creative": { "type": "string" },
+            "professional": { "type": "string" }
+          }
+        }
+      },
+      "required": ["openRouterKeyEncrypted", "defaultModel", "pillarModelMap"]
+    },
+    "Account": {
+      "title": "Financial Account",
+      "description": "Credit cards, bank accounts, or savings.",
+      "type": "object",
+      "properties": {
+        "accountId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["credit_card", "bank_checking", "savings"] },
+        "institution": { "type": "string" },
+        "principalBalance": { "type": "number" },
+        "creditLimit": { "type": "number" },
+        "aprPercentage": { "type": "number" },
+        "statementClosingDay": { "type": "number" },
+        "dueDate": { "type": "string", "format": "date" },
+        "minimumPayment": { "type": "number" },
+        "lastStatementBalance": { "type": "number" },
+        "activeInstallments": { "type": "number" }
+      },
+      "required": ["accountId", "name", "type", "principalBalance"]
+    },
+    "Shift": {
+      "title": "Work Shift",
+      "description": "Logged work hours for income prediction.",
+      "type": "object",
+      "properties": {
+        "shiftId": { "type": "string" },
+        "employerId": { "type": "string" },
+        "roleId": { "type": "string" },
+        "shiftDate": { "type": "string", "format": "date" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "scheduledHours": { "type": "number" },
+        "hourlyRateOverride": { "type": "number" },
+        "grossEstimatedPay": { "type": "number" },
+        "netEstimatedPay": { "type": "number" },
+        "status": { "type": "string", "enum": ["scheduled", "completed", "cancelled"] },
+        "gcalEventId": { "type": "string" }
+      },
+      "required": ["shiftId", "employerId", "shiftDate", "scheduledHours"]
+    },
+    "EmployerConfig": {
+      "title": "Employer Configuration",
+      "description": "Dynamic payroll and tax settings for an employer.",
+      "type": "object",
+      "properties": {
+        "employerId": { "type": "string" },
+        "name": { "type": "string" },
+        "payCycle": { "type": "string", "enum": ["weekly", "bi_weekly", "semi_monthly", "monthly"] },
+        "payPeriodAnchorDate": { "type": "string", "format": "date" },
+        "roles": { "type": "array" },
+        "taxProfile": { "type": "object" },
+        "customDeductions": { "type": "array" },
+        "vacationAccrualPct": { "type": "number" }
+      },
+      "required": ["employerId", "name", "payCycle"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Income or expense record.",
+      "type": "object",
+      "properties": {
+        "txId": { "type": "string" },
+        "accountId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["expense", "income", "internal_transfer"] },
+        "category": { "type": "string" },
+        "subcategory": { "type": "string" },
+        "merchant": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "isImpulse": { "type": "boolean" },
+        "receiptStoragePath": { "type": "string" }
+      },
+      "required": ["txId", "amount", "type", "timestamp"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Actionable items in the Kanban system.",
+      "type": "object",
+      "properties": {
+        "taskId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["todo", "in_progress", "completed"] },
+        "energyTag": { "type": "string", "enum": ["low", "medium", "deep_work"] },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "originalDueDate": { "type": "string", "format": "date-time" },
+        "rescheduleCount": { "type": "number" },
+        "linkedCanvasId": { "type": "string" }
+      },
+      "required": ["taskId", "title", "status", "energyTag"]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "Recurring behaviors tracked over time.",
+      "type": "object",
+      "properties": {
+        "habitId": { "type": "string" },
+        "title": { "type": "string" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly"] },
+        "targetValue": { "type": "number" },
+        "completionLog": { "type": "object" }
+      },
+      "required": ["habitId", "title", "frequency", "targetValue"]
+    },
+    "HealthLog": {
+      "title": "Health Log",
+      "description": "Daily health metrics (sleep, weight, etc).",
+      "type": "object",
+      "properties": {
+        "logId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "weightKg": { "type": "number" },
+        "bmi": { "type": "number" },
+        "bodyFatPct": { "type": "number" },
+        "skeletalMusclePct": { "type": "number" },
+        "fatFreeMassKg": { "type": "number" },
+        "subcutaneousFatPct": { "type": "number" },
+        "visceralFatGrade": { "type": "number" },
+        "bodyWaterPct": { "type": "number" },
+        "muscleMassKg": { "type": "number" },
+        "boneMassKg": { "type": "number" },
+        "proteinPct": { "type": "number" },
+        "bmrKcal": { "type": "number" },
+        "metabolicAge": { "type": "number" },
+        "sleepHours": { "type": "number" },
+        "recoveryScore": { "type": "number" }
+      },
+      "required": ["logId", "date"]
+    },
+    "JournalEntry": {
+      "title": "Journal Entry",
+      "description": "Daily reflections and sentiment analysis.",
+      "type": "object",
+      "properties": {
+        "entryId": { "type": "string" },
+        "text": { "type": "string" },
+        "sentimentScore": { "type": "number" },
+        "extractedActionItems": { "type": "array", "items": { "type": "string" } },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["entryId", "text", "timestamp"]
+    },
+    "Canvas": {
+      "title": "Excalidraw Canvas",
+      "description": "Creative whiteboards.",
+      "type": "object",
+      "properties": {
+        "canvasId": { "type": "string" },
+        "title": { "type": "string" },
+        "excalidrawSceneJson": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["canvasId", "title", "excalidrawSceneJson", "lastUpdated"]
+    },
+    "Milestone": {
+      "title": "Milestone",
+      "description": "Strategic professional goals.",
+      "type": "object",
+      "properties": {
+        "milestoneId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "targetDate": { "type": "string", "format": "date" },
+        "completedDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "achieved"] }
+      },
+      "required": ["milestoneId", "title", "targetDate", "status"]
+    },
+    "AutopilotLog": {
+      "title": "Autopilot Log",
+      "description": "Autonomous mesh mutations.",
+      "type": "object",
+      "properties": {
+        "logId": { "type": "string" },
+        "type": { "type": "string", "enum": ["health_recovery", "financial_stress", "journal_distillation", "yield_optimization"] },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "impact": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["logId", "type", "message", "timestamp", "impact"]
+    },
+    "CreditReport": {
+      "title": "Credit Report",
+      "description": "Credit bureau telemetry.",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string" },
+        "bureau": { "type": "string", "enum": ["Equifax", "TransUnion", "Experian"] },
+        "score": { "type": "number" },
+        "revolvingUtilizationPct": { "type": "number" },
+        "hardInquiries": { "type": "number" },
+        "tradeLines": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reportId", "bureau", "score", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}/settings/vault": { "schema": "VaultSettings", "description": "Encrypted user vault." },
+    "/users/{uid}/accounts/{accountId}": { "schema": "Account", "description": "Financial accounts." },
+    "/users/{uid}/employers/{employerId}": { "schema": "EmployerConfig", "description": "Employer configurations." },
+    "/users/{uid}/shifts/{shiftId}": { "schema": "Shift", "description": "Work shifts." },
+    "/users/{uid}/transactions/{txId}": { "schema": "Transaction", "description": "Transactions." },
+    "/users/{uid}/tasks/{taskId}": { "schema": "Task", "description": "Tasks." },
+    "/users/{uid}/habits/{habitId}": { "schema": "Habit", "description": "Habits." },
+    "/users/{uid}/health_logs/{logId}": { "schema": "HealthLog", "description": "Health metrics." },
+    "/users/{uid}/journal_entries/{entryId}": { "schema": "JournalEntry", "description": "Journal entries." },
+    "/users/{uid}/canvases/{canvasId}": { "schema": "Canvas", "description": "Whiteboard canvases." },
+    "/users/{uid}/milestones/{milestoneId}": { "schema": "Milestone", "description": "Professional milestones." },
+    "/users/{uid}/autopilot_logs/{logId}": { "schema": "AutopilotLog", "description": "Autopilot autonomous logs." },
+    "/users/{uid}/credit_reports/{reportId}": { "schema": "CreditReport", "description": "Credit bureau reports." }
+  }
+}

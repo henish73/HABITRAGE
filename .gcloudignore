@@ -11,3 +11,10 @@ apps/mobile/
 .env*
 txt
 data/seed_cache.json
+datasets_financial_mesh/
+data/*.csv
+*.csv
+*.xlsx
+*.pdf
+*.zip
+Transactions-With-Type-V3.csv

@@ -1,0 +1,6 @@
+{
+  "name": "HABITRAGE",
+  "description": "An integrated personal intelligence ecosystem unifying finance, habits, health, journal, creative, and professional pillars.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

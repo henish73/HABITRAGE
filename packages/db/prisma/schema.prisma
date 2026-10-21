@@ -1,0 +1,121 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Account {
+  id             String        @id @default(uuid())
+  type           String        // "bank" or "credit_card"
+  bank_name      String        // e.g. "CIBC", "TD", "RBC", "Rogers Bank", "American Express"
+  account_name   String        // e.g. "CIBC Smart Account", "TD Low Rate Visa"
+  account_number String        // masked, e.g. "****7254"
+  account_type   String        // e.g. "Chequing", "Savings", "Find & Save", "Credit Card"
+  balance        Decimal       @default(0)
+  credit_limit   Decimal?
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  transactions   Transaction[]
+  bills          Bill[]
+
+  @@map("accounts")
+}
+
+model Transaction {
+  id                   String   @id @default(uuid())
+  account_id           String
+  account              Account  @relation(fields: [account_id], references: [id], onDelete: Cascade)
+  date                 String   // YYYY-MM-DD
+  description          String
+  merchant             String   @default("")
+  category             String   @default("General")
+  type                 String?  @default("Outflow") // "Inflow", "Outflow", "Transfers"
+  amount               Decimal  // negative for expense, positive for income
+  debit                Decimal? // charge or withdrawal
+  credit               Decimal? // deposit or payment
+  running_balance      Decimal?
+  status               String   @default("posted") // "posted" or "pending"
+  cheque_number        String?
+  foreign_spend_amount Decimal?
+  commission           Decimal?
+  exchange_rate        Decimal?
+  additional_info      String?
+  address              String?
+  city_province        String?
+  country              String?
+  reference_number     String?
+  source_file          String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  @@index([account_id])
+  @@index([date])
+  @@index([category])
+  @@index([type])
+  @@index([status])
+  @@map("transactions")
+}
+
+model Category {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  color      String?
+  icon       String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Bill {
+  id                String   @id @default(uuid())
+  name              String   // e.g. "Rent", "Rogers Mobile", "Hydro One", "CIBC Dividend Visa"
+  type              String   // "rent", "credit_card", "utility", "subscription", "other"
+  amount            Decimal
+  due_day           Int      // 1-31
+  frequency         String   @default("monthly") // "monthly", "weekly", "biweekly"
+  linked_account_id String?
+  linked_account    Account? @relation(fields: [linked_account_id], references: [id], onDelete: SetNull)
+  autopay           Boolean  @default(false)
+  next_due_date     String   // YYYY-MM-DD
+  is_paid           Boolean  @default(false)
+  notes             String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@map("bills")
+}
+
+model CreditReport {
+  id                  String   @id @default(uuid())
+  bureau              String   // "Equifax", "TransUnion", "Borrowell"
+  file_url            String
+  file_name           String
+  score               Int      // 300 - 900
+  utilization_percent Decimal
+  total_debt          Decimal
+  open_accounts       Json
+  closed_accounts     Json
+  inquiries           Json
+  derogatories        Json
+  extracted_text      String?
+  extracted_json      Json?
+  uploaded_at         DateTime @default(now())
+
+  @@map("credit_reports")
+}
+
+model AiChatHistory {
+  id             String   @id @default(uuid())
+  role           String   // "user", "assistant", "system"
+  content        String
+  function_calls Json?
+  created_at     DateTime @default(now())
+
+  @@map("ai_chat_history")
+}
