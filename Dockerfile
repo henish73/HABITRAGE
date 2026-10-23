@@ -9,8 +9,8 @@
 # The JSON ledger lives at /app/data/seed_cache.json. Mount a persistent volume
 # at /app/data, or the data is lost whenever the container is replaced.
 
-FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl && corepack enable
+FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat openssl && npm install -g pnpm@12.14.0
 WORKDIR /app
 
 # 1. Install dependencies for the web app and the packages it uses
@@ -37,7 +37,7 @@ RUN pnpm --filter @financeos/design-tokens build \
  && pnpm --filter web build
 
 # 3. Minimal runtime
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 ENV NODE_ENV=production \
