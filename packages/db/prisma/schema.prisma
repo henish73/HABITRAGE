@@ -66,6 +66,8 @@ model Transaction {
   exclude_from_reports Boolean   @default(false)
   deleted_at           DateTime? // soft delete (30-day trash)
   import_batch_id      String?
+  transfer_kind        String?   // "internal" | "external_in" | "external_out"
+  transfer_group_id    String?
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 
@@ -73,6 +75,7 @@ model Transaction {
   @@index([owner_id, date])
   @@index([owner_id, status])
   @@index([owner_id, deleted_at])
+  @@index([owner_id, transfer_group_id])
   @@index([account_id])
   @@index([category])
   @@index([type])

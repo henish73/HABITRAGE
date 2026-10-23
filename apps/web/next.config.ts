@@ -14,7 +14,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   // Lets a production build run next to a dev server without clobbering its .next folder.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,

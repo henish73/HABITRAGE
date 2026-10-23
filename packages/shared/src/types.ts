@@ -63,6 +63,12 @@ export interface Transaction {
   country?: string | null;
   reference_number?: string | null;
   source_file?: string | null;
+  reviewed_at?: string | null;
+  exclude_from_reports?: boolean;
+  deleted_at?: string | null;
+  import_batch_id?: string | null;
+  transfer_kind?: 'internal' | 'external_in' | 'external_out' | null;
+  transfer_group_id?: string | null;
   created_at?: string;
   updated_at?: string;
   
