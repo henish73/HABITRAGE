@@ -5,7 +5,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "generate": "prisma generate",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "seed": "tsx src/seed.ts",
     "import:json": "tsx src/import-from-json.ts",
     "db:push": "prisma db push",

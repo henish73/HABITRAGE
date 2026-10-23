@@ -2,7 +2,7 @@
   "name": "financeos-monorepo",
   "private": true,
   "scripts": {
-    "build": "pnpm build:packages && pnpm --filter @financeos/db generate && pnpm --filter web build",
+    "build": "pnpm --filter @financeos/db generate && pnpm build:packages && pnpm --filter web build",
     "dev": "turbo dev",
     "dev:web": "pnpm --filter web dev",
     "dev:mobile": "pnpm --filter @financeos/mobile start",
