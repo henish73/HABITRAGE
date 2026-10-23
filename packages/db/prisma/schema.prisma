@@ -5,100 +5,124 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
 model Account {
-  id             String        @id @default(uuid())
-  type           String        // "bank" or "credit_card"
-  bank_name      String        // e.g. "CIBC", "TD", "RBC", "Rogers Bank", "American Express"
-  account_name   String        // e.g. "CIBC Smart Account", "TD Low Rate Visa"
-  account_number String        // masked, e.g. "****7254"
-  account_type   String        // e.g. "Chequing", "Savings", "Find & Save", "Credit Card"
-  balance        Decimal       @default(0)
-  credit_limit   Decimal?
-  created_at     DateTime      @default(now())
-  updated_at     DateTime      @updatedAt
+  id                     String   @id @default(uuid())
+  owner_id               String   @default("owner")
+  type                   String // "bank" or "credit_card"
+  bank_name              String // e.g. "CIBC", "TD", "RBC", "Rogers Bank", "American Express"
+  account_name           String // e.g. "CIBC Smart Account", "TD Low Rate Visa"
+  account_number         String // masked, e.g. "****7254"
+  account_type           String // e.g. "Chequing", "Savings", "Find & Save", "Credit Card"
+  opening_balance        Decimal  @default(0) @db.Decimal(14, 2)
+  balance                Decimal  @default(0) @db.Decimal(14, 2)
+  credit_limit           Decimal? @db.Decimal(14, 2)
+  apr                    Decimal? @db.Decimal(7, 6)
+  due_date               String? // YYYY-MM-DD or day of month
+  minimum_payment        Decimal? @db.Decimal(14, 2)
+  statement_closing_date String?
+  notes                  String?
+  archived               Boolean  @default(false)
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
 
   transactions   Transaction[]
   bills          Bill[]
+  income_sources IncomeSource[]
 
+  @@index([owner_id])
   @@map("accounts")
 }
 
 model Transaction {
-  id                   String   @id @default(uuid())
+  id                   String    @id @default(uuid())
+  owner_id             String    @default("owner")
   account_id           String
-  account              Account  @relation(fields: [account_id], references: [id], onDelete: Cascade)
-  date                 String   // YYYY-MM-DD
+  account              Account   @relation(fields: [account_id], references: [id], onDelete: Cascade)
+  date                 String // YYYY-MM-DD
   description          String
-  merchant             String   @default("")
-  category             String   @default("General")
-  type                 String?  @default("Outflow") // "Inflow", "Outflow", "Transfers"
-  amount               Decimal  // negative for expense, positive for income
-  debit                Decimal? // charge or withdrawal
-  credit               Decimal? // deposit or payment
-  running_balance      Decimal?
-  status               String   @default("posted") // "posted" or "pending"
+  merchant             String    @default("")
+  category             String    @default("General")
+  type                 String?   @default("Outflow") // "Inflow", "Outflow", "Transfers"
+  amount               Decimal   @db.Decimal(14, 2) // negative for expense, positive for income
+  debit                Decimal?  @db.Decimal(14, 2) // charge or withdrawal
+  credit               Decimal?  @db.Decimal(14, 2) // deposit or payment
+  running_balance      Decimal?  @db.Decimal(14, 2)
+  status               String    @default("posted") // "posted" or "pending"
   cheque_number        String?
-  foreign_spend_amount Decimal?
-  commission           Decimal?
-  exchange_rate        Decimal?
+  foreign_spend_amount Decimal?  @db.Decimal(14, 2)
+  commission           Decimal?  @db.Decimal(14, 2)
+  exchange_rate        Decimal?  @db.Decimal(14, 6)
   additional_info      String?
   address              String?
   city_province        String?
   country              String?
   reference_number     String?
   source_file          String?
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  reviewed_at          DateTime?
+  exclude_from_reports Boolean   @default(false)
+  deleted_at           DateTime? // soft delete (30-day trash)
+  import_batch_id      String?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
 
+  @@index([owner_id, account_id, date])
+  @@index([owner_id, date])
+  @@index([owner_id, status])
+  @@index([owner_id, deleted_at])
   @@index([account_id])
-  @@index([date])
   @@index([category])
   @@index([type])
-  @@index([status])
   @@map("transactions")
 }
 
 model Category {
   id         String   @id @default(uuid())
-  name       String   @unique
+  owner_id   String   @default("owner")
+  name       String
   color      String?
   icon       String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  @@unique([owner_id, name])
+  @@index([owner_id])
   @@map("categories")
 }
 
 model Bill {
   id                String   @id @default(uuid())
-  name              String   // e.g. "Rent", "Rogers Mobile", "Hydro One", "CIBC Dividend Visa"
-  type              String   // "rent", "credit_card", "utility", "subscription", "other"
-  amount            Decimal
-  due_day           Int      // 1-31
+  owner_id          String   @default("owner")
+  name              String // e.g. "Rent", "Rogers Mobile", "Hydro One", "CIBC Dividend Visa"
+  type              String // "rent", "credit_card", "utility", "subscription", "other"
+  amount            Decimal  @db.Decimal(14, 2)
+  due_day           Int // 1-31
   frequency         String   @default("monthly") // "monthly", "weekly", "biweekly"
   linked_account_id String?
   linked_account    Account? @relation(fields: [linked_account_id], references: [id], onDelete: SetNull)
   autopay           Boolean  @default(false)
-  next_due_date     String   // YYYY-MM-DD
+  next_due_date     String // YYYY-MM-DD
   is_paid           Boolean  @default(false)
   notes             String?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 
+  @@index([owner_id])
   @@map("bills")
 }
 
 model CreditReport {
   id                  String   @id @default(uuid())
-  bureau              String   // "Equifax", "TransUnion", "Borrowell"
+  owner_id            String   @default("owner")
+  bureau              String // "Equifax", "TransUnion", "Borrowell"
   file_url            String
   file_name           String
-  score               Int      // 300 - 900
-  utilization_percent Decimal
-  total_debt          Decimal
+  score               Int // 300 - 900
+  utilization_percent Decimal  @db.Decimal(5, 2)
+  total_debt          Decimal  @db.Decimal(14, 2)
   open_accounts       Json
   closed_accounts     Json
   inquiries           Json
@@ -107,15 +131,44 @@ model CreditReport {
   extracted_json      Json?
   uploaded_at         DateTime @default(now())
 
+  @@index([owner_id])
   @@map("credit_reports")
 }
 
 model AiChatHistory {
   id             String   @id @default(uuid())
-  role           String   // "user", "assistant", "system"
+  owner_id       String   @default("owner")
+  role           String // "user", "assistant", "system"
   content        String
   function_calls Json?
   created_at     DateTime @default(now())
 
+  @@index([owner_id])
   @@map("ai_chat_history")
+}
+
+model IncomeSource {
+  id         String   @id @default(uuid())
+  owner_id   String   @default("owner")
+  name       String
+  amount     Decimal  @db.Decimal(14, 2)
+  frequency  String // "weekly", "biweekly", "semimonthly", "monthly"
+  next_date  String // YYYY-MM-DD
+  account_id String?
+  account    Account? @relation(fields: [account_id], references: [id], onDelete: SetNull)
+  active     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([owner_id])
+  @@map("income_sources")
+}
+
+model RateLimit {
+  key      String   @id
+  count    Int      @default(1)
+  reset_at DateTime
+
+  @@index([reset_at])
+  @@map("rate_limits")
 }

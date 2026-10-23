@@ -21,6 +21,7 @@ export interface Account {
   installment_plan_remaining?: number | null;
   installment_plan_notes?: string | null;
   notes?: string | null;
+  archived?: boolean;
   created_at?: string;
   updated_at?: string;
 }

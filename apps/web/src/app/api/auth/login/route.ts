@@ -7,39 +7,59 @@ import {
   createSessionToken,
 } from '@/lib/auth';
 
+import { prisma } from '@financeos/db';
+
 const WINDOW_MS = 60 * 1000;
 const MAX_FAILURES_PER_CLIENT = 5;
 // Ceiling across all clients, so rotating spoofed IP headers can't buy unlimited guesses.
 const MAX_FAILURES_GLOBAL = 30;
-
-type Bucket = { attempts: number; resetAt: number };
-const failures = new Map<string, Bucket>();
 const GLOBAL_KEY = '__global__';
 
-function bucketFor(key: string, now: number): Bucket {
-  const existing = failures.get(key);
-  if (existing && now <= existing.resetAt) return existing;
-  const fresh = { attempts: 0, resetAt: now + WINDOW_MS };
-  failures.set(key, fresh);
-  return fresh;
-}
+async function isRateLimited(clientKey: string): Promise<boolean> {
+  const now = new Date();
+  const [clientBucket, globalBucket] = await Promise.all([
+    prisma.rateLimit.findUnique({ where: { key: clientKey } }),
+    prisma.rateLimit.findUnique({ where: { key: GLOBAL_KEY } }),
+  ]);
 
-function isRateLimited(clientKey: string): boolean {
-  const now = Date.now();
-  return (
-    bucketFor(clientKey, now).attempts >= MAX_FAILURES_PER_CLIENT ||
-    bucketFor(GLOBAL_KEY, now).attempts >= MAX_FAILURES_GLOBAL
-  );
-}
-
-function recordFailure(clientKey: string) {
-  const now = Date.now();
-  bucketFor(clientKey, now).attempts += 1;
-  bucketFor(GLOBAL_KEY, now).attempts += 1;
-  // Keep the map from growing without bound.
-  if (failures.size > 5000) {
-    for (const [key, bucket] of failures) if (now > bucket.resetAt) failures.delete(key);
+  if (clientBucket && clientBucket.reset_at > now && clientBucket.count >= MAX_FAILURES_PER_CLIENT) {
+    return true;
   }
+  if (globalBucket && globalBucket.reset_at > now && globalBucket.count >= MAX_FAILURES_GLOBAL) {
+    return true;
+  }
+  return false;
+}
+
+async function incrementBucket(key: string, now: Date, resetAt: Date) {
+  const bucket = await prisma.rateLimit.findUnique({ where: { key } });
+  if (bucket && bucket.reset_at > now) {
+    await prisma.rateLimit.update({
+      where: { key },
+      data: { count: { increment: 1 } },
+    });
+  } else {
+    await prisma.rateLimit.upsert({
+      where: { key },
+      create: { key, count: 1, reset_at: resetAt },
+      update: { count: 1, reset_at: resetAt },
+    });
+  }
+}
+
+async function recordFailure(clientKey: string) {
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + WINDOW_MS);
+  await Promise.all([
+    incrementBucket(clientKey, now, resetAt),
+    incrementBucket(GLOBAL_KEY, now, resetAt),
+  ]);
+}
+
+async function clearFailure(clientKey: string) {
+  try {
+    await prisma.rateLimit.deleteMany({ where: { key: clientKey } });
+  } catch {}
 }
 
 /**
@@ -67,7 +87,7 @@ function passcodeMatches(input: string, expected: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     const key = clientKey(req);
-    if (isRateLimited(key)) {
+    if (await isRateLimited(key)) {
       return NextResponse.json(
         { error: 'Too many failed attempts. Wait a minute and try again.' },
         { status: 429, headers: { 'Retry-After': '60' } }
@@ -82,11 +102,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (!passcodeMatches(passcode, getMasterPasscode())) {
-      recordFailure(key);
+      await recordFailure(key);
       return NextResponse.json({ error: 'That passcode is not correct.' }, { status: 401 });
     }
 
-    failures.delete(key);
+    await clearFailure(key);
     const token = await createSessionToken();
 
     // The mobile app can't use cookies reliably, so it receives the signed session

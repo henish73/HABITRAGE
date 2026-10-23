@@ -1,52 +1,53 @@
 # Deploying FinanceOS
 
-FinanceOS stores its data in one JSON file (the ledger), so a few rules matter in production.
+FinanceOS runs on PostgreSQL as its sole database store. It supports multi-instance serverless deployments (Vercel, Google Cloud Run) without persistent disk requirements.
 
-## Before the first deploy
+## 1. Secrets & Environment Variables
 
-1. **Set the secrets** (see `apps/web/.env.example`). The app refuses to run in production without them.
-   - `AUTH_SECRET`: 32+ random characters. Generate one:
-     `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
-   - `FINANCEOS_PASSCODE`: a long passphrase (12+ characters required in production; shorter passcodes throw on startup).
-   - `TRUSTED_PROXY_HOPS`: `1` behind a single proxy (Cloud Run, Vercel, nginx).
-   - Optional: `OPENROUTER_API_KEY` for the AI assistant.
-2. **Never commit** `.env*` files, `data/seed_cache.json` or your statement files. They're git-ignored.
-3. If an old key or passcode ever appeared in code, a chat or a screenshot, **change it** before going live.
+Configure these in your host's secret manager or `.env.local` (never commit real values):
 
-## Run exactly one instance
+- `AUTH_SECRET`: 32+ random characters signing session cookies and JWT tokens.
+  Generate one with:
+  ```bash
+  node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+  ```
+- `FINANCEOS_PASSCODE`: 12+ character master passphrase unlocking the vault. The app throws on startup if this is shorter than 12 characters in production.
+- `OWNER_ID`: Scopes all ledger queries and operations (defaults to `"owner"`).
+- `DATABASE_URL`: **Pooled** connection string with SSL required. On Supabase, this connects via PgBouncer on port `6543`:
+  `postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require`
+- `DIRECT_URL`: **Direct** connection string used exclusively for `prisma migrate deploy`:
+  `postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres?sslmode=require`
+- `TRUSTED_PROXY_HOPS`: `1` behind a single proxy (Cloud Run, Vercel, nginx).
+- `OPENROUTER_API_KEY`: Optional key for AI assistant features.
 
-The ledger lives in memory and in a single file. Two instances would each keep their own copy and overwrite one another.
+## 2. Serverless & Prisma Architecture
 
-- Cloud Run: `--max-instances=1 --min-instances=1` (and `--cpu-boost`).
-- Docker / VM: one container.
+- **Singleton PrismaClient**: One instance per process managed via `globalThis.prisma`. Connections are pooled; never instantiate per-request.
+- **Binary Targets**: Prisma generates engines for:
+  - `native` (local development)
+  - `rhel-openssl-3.0.x` (Vercel serverless functions)
+  - `linux-musl-openssl-3.0.x` (Alpine / Docker containers)
+- **Migrations**: Deployment runs:
+  ```bash
+  pnpm --filter @financeos/db exec prisma migrate deploy
+  ```
+- `prisma generate` runs automatically on install and build.
+- **Login Rate Limiting**: Managed via the PostgreSQL `RateLimit` table (`rate_limits`), persisting across restarts and shared across multiple running instances.
 
-## Keep your data
+## 3. Database Migration & Seed
 
-- Mount a persistent volume at `/app/data` (or set `FINANCEOS_DATA_FILE` to a path on a volume). Without one, **all data is lost whenever the container is replaced.** Cloud Run's own disk is temporary, so use a volume mount (Cloud Storage FUSE or a filestore) or run on a VM.
-- Back it up: copy `seed_cache.json` somewhere safe on a schedule. The file is written atomically, so a copy is always consistent.
-- Deleted transactions stay recoverable for 30 days (in the same file).
-
-## Build and run
-
+To import existing ledger JSON data into a clean Postgres database:
 ```bash
-docker build -t financeos-web .
-docker run -d --name financeos -p 8080:8080 \
-  -e AUTH_SECRET=... -e FINANCEOS_PASSCODE=... \
-  -v financeos-data:/app/data \
-  financeos-web
+pnpm --filter @financeos/db import:json -- --file data/seed_cache.json
 ```
+The import script is idempotent and performs verification comparing row counts, account balances, and cash flow totals.
 
-Health check: `GET /api/health` returns `{ "ok": true }` (no login needed, no data).
+## 4. Health Checks & Security
 
-## Serve over HTTPS
+- Health check: `GET /api/health` returns `{ "ok": true }` (public, unauthenticated).
+- Session cookies are strictly `httpOnly`, `SameSite=Lax`, and `Secure` over HTTPS.
+- Strict-Transport-Security (HSTS) headers are enforced in production.
 
-Session cookies are marked `Secure` in production, so the site must be served over HTTPS (Cloud Run, Vercel and most hosts do this for you). Strict-Transport-Security is sent automatically.
+## 5. Mobile App
 
-## Mobile app
-
-Set `EXPO_PUBLIC_API_URL` (for example `https://financeos.example.com/api`) before building the app, so phones and real devices can reach the server. The app signs in with your passcode and keeps only a session token in the device keychain.
-
-## Known limits
-
-- A JSON file suits one person's ledger (thousands of rows). For several users or very large data, move to Postgres as the primary store (the schema is in `packages/db/prisma`).
-- Login attempts are limited per client address and overall, in memory (they reset on restart).
+Set `EXPO_PUBLIC_API_URL` (e.g. `https://financeos.example.com/api`) when building mobile binaries. Mobile uses Bearer token authentication stored in the OS secure keychain.

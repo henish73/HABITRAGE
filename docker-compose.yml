@@ -1,0 +1,12 @@
+services:
+  test-db:
+    image: postgres:16
+    container_name: financeos-test-db
+    environment:
+      POSTGRES_DB: financeos_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpassword
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data

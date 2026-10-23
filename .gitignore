@@ -24,7 +24,8 @@ data/*.csv
 Transactions-With-Type-V3.csv
 
 # Local data cache
-data/seed_cache.json
+data/seed_cache*.json
+data/*.json
 
 # Logs
 *.log
@@ -39,3 +40,4 @@ Thumbs.db
 *.tsbuildinfo
 .next-*/
 data/*.tmp
+.test-pg-data/
