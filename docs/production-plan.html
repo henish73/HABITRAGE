@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinanceOS Production Plan</title>
+<style>
+/* Layout: one reading column. Verdict first, then evidence tables, then the phased plan and a launch checklist. */
+:root{
+  --canvas:#F3F5F9; --surface:#FFFFFF; --raised:#F8FAFC; --line:#DFE5EE; --line-soft:#EAEFF5;
+  --ink:#0E1726; --muted:#5A6B80; --faint:#8A99AD;
+  --teal:#0E8A78; --teal-soft:#E0F2EE;
+  --pos:#16835A; --neg:#C23A2E; --warn:#B8770A; --info:#2D5FA8;
+  --pos-soft:#E2F2EA; --neg-soft:#FBE8E5; --warn-soft:#FBF0DA; --info-soft:#E4ECF8;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45; --info:#7FA8EC;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D; --info-soft:#152238;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45; --info:#7FA8EC;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D; --info-soft:#152238;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--ui);font-size:15.5px;line-height:1.6;
+  padding:48px max(16px,env(safe-area-inset-right,0px)) 96px max(16px,env(safe-area-inset-left,0px))}
+.page{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:60px}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.02em}
+h1{font-size:clamp(30px,5vw,48px);line-height:1.06;font-weight:800;letter-spacing:-.04em}
+h2{font-size:clamp(23px,3vw,30px);font-weight:700;letter-spacing:-.03em}
+h3{font-size:16px;font-weight:600}
+p{margin:0;max-width:70ch}
+code{font-family:var(--mono);font-size:.85em;background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:1px 5px;word-break:break-word}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.lede{font-size:17px;color:var(--muted)}
+.muted{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:16px}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .warn{color:var(--warn)}
+
+.verdict{border:1px solid var(--neg);background:var(--neg-soft);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:8px}
+.verdict b.t{color:var(--neg);font-size:17px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.strip>div{padding:14px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.strip>div:last-child{border-right:0}
+.strip .k{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.strip .v{font-family:var(--mono);font-size:24px;font-weight:600}
+.strip .s{font-size:12.5px;color:var(--muted)}
+
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:54px 84px 1fr;gap:12px;padding:13px 18px;border-top:1px solid var(--line-soft)}
+.row:first-child{border-top:0}
+.row>div{min-width:0}
+.row p{font-size:14px;color:var(--muted);margin-top:2px}
+.row .fix{font-size:13.5px;margin-top:5px;color:var(--ink)}
+.row .fix::before{content:"Fix: ";font-weight:600;color:var(--teal)}
+.id{font-family:var(--mono);font-size:12px;color:var(--faint);padding-top:3px}
+.sev{align-self:start;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:99px;text-align:center;border:1px solid}
+.sev.c{color:var(--neg);background:var(--neg-soft);border-color:var(--neg)}
+.sev.h{color:var(--warn);background:var(--warn-soft);border-color:var(--warn)}
+.sev.m{color:var(--info);background:var(--info-soft);border-color:var(--info)}
+.sev.l{color:var(--muted);background:var(--raised);border-color:var(--line)}
+
+.done{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.done ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:7px 22px;font-size:14px}
+.done li{display:flex;gap:8px}
+.done li::before{content:"✓";color:var(--pos);font-weight:700}
+
+.road{display:flex;flex-direction:column;border-left:2px solid var(--line);margin-left:9px}
+.ph{position:relative;padding:0 0 30px 30px;display:flex;flex-direction:column;gap:8px}
+.ph::before{content:"";position:absolute;left:-9px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--canvas);border:2px solid var(--teal)}
+.ph.block::before{border-color:var(--neg);background:var(--neg)}
+.ph:last-child{padding-bottom:0}
+.ph .hd{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.ph .hd span{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.ph h3 b{font-family:var(--mono);color:var(--teal);margin-right:8px;font-size:13px}
+.ph.block h3 b{color:var(--neg)}
+.ph ul{margin:0;padding-left:18px;color:var(--muted);font-size:14.5px;display:flex;flex-direction:column;gap:4px}
+.ph ul b{color:var(--ink);font-weight:600}
+.ph .dw{font-size:13.5px;border:1px dashed var(--line);border-radius:10px;padding:8px 12px;background:var(--surface)}
+.ph .dw b{color:var(--teal)}
+
+.check{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.check ul{margin:0;padding:0;list-style:none;display:grid;gap:8px;font-size:14.5px}
+.check li{display:flex;gap:10px}
+.check li::before{content:"";flex:none;width:16px;height:16px;margin-top:3px;border:2px solid var(--line);border-radius:4px}
+.dec{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.dec ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:14.5px}
+@media (max-width:640px){.row{grid-template-columns:1fr;gap:4px}.strip>div{border-right:0;border-top:1px solid var(--line)}.strip>div:first-child{border-top:0}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header style="display:flex;flex-direction:column;gap:12px">
+  <span class="eyebrow">FinanceOS · Anomaly report and production plan · 22 Oct 2026</span>
+  <h1>Not ready to go live yet. One blocker, then about three weeks of work.</h1>
+  <p class="lede">I checked the code, the dependencies, the running app and every row of your ledger. The app itself works: tests pass and the production build succeeds. But the login can be bypassed on the current Next.js version, and a few data and ops gaps need closing before real use.</p>
+</header>
+
+<div class="verdict">
+  <b class="t">Blocker: anyone can skip the login on the current version.</b>
+  <p>Your app runs Next.js 15.1.7. Its middleware (where the login check lives) has a known bypass. I tested it against a local copy: a request with the header <code>x-middleware-subrequest: src/middleware:…</code> and no login returned all 13 accounts and opened page routes. Upgrade Next.js and add a login check inside the API routes themselves (items S1 and S4 below). Do not put this on the internet before that.</p>
+</div>
+
+<div class="strip">
+  <div><span class="k">Tests</span><span class="v pos">83 / 83</span><span class="s">all passing</span></div>
+  <div><span class="k">Type-check + build</span><span class="v pos">Clean</span><span class="s">web, mobile, packages</span></div>
+  <div><span class="k">Dependency audit</span><span class="v neg">6 critical</span><span class="s">43 high, 26 moderate, 5 low</span></div>
+  <div><span class="k">Ledger rows to review</span><span class="v warn">654</span><span class="s">of 4,159 (16%)</span></div>
+  <div><span class="k">Account balances</span><span class="v pos">13 / 13</span><span class="s">reconcile with the ledger</span></div>
+</div>
+
+<section>
+  <span class="eyebrow">Already done this session (uncommitted)</span>
+  <div class="done"><ul>
+    <li>Activity: date ranges, amount range, status, sort, money in / out / net, "select all matching"</li>
+    <li>Bulk change of type, status and category, with a safety count and a confirmation for type changes</li>
+    <li>CSV export of exactly the filtered rows (UTF-8 for Excel, formula-safe)</li>
+    <li>Printable report page for PDF (loads up to 5,000 rows; the old popup printed only 200)</li>
+    <li>Date presets in your timezone (UTC gave the wrong day for part of every day)</li>
+    <li>One shared filter definition for list, export, bulk and report</li>
+    <li>Fixed the print stylesheet error that would have broken <code>next build</code></li>
+    <li>26 API error responses no longer leak internal error text</li>
+    <li>Account edit and credit-report upload now validate their input; no more invented 720 score or 5% utilization</li>
+    <li>Account dialog rewritten: editing used to create a duplicate; added APR, due date, minimum payment</li>
+    <li>New accounts keep their starting balance as the opening balance</li>
+    <li>Extra security headers, <code>docs/DEPLOY.md</code>, and 29 new tests</li>
+  </ul></div>
+</section>
+
+<section>
+  <span class="eyebrow">Anomaly register</span>
+  <h2>1. Security</h2>
+  <div class="tbl">
+    <div class="row"><span class="id">S1</span><span class="sev c">Critical</span><div><h3>Login bypass in Next.js 15.1.7 middleware</h3><p>Confirmed locally. The audit lists 6 critical issues, including the middleware bypass, an RCE in the React flight protocol, and RCE through the image optimizer.</p><div class="fix">Upgrade Next.js to the latest 15.5.x (15.5.16 or newer), rebuild, and repeat the header test: it must return 401.</div></div></div>
+    <div class="row"><span class="id">S2</span><span class="sev h">High</span><div><h3>43 high and 26 moderate advisories</h3><p>Mostly Next.js (denial of service, cache poisoning, SSRF) plus mobile build-tool packages (<code>tar</code>, <code>@xmldom/xmldom</code>, <code>uuid</code>, <code>postcss</code>).</p><div class="fix">Upgrade Next.js first (clears most), then update Expo packages and run <code>pnpm audit --prod</code> until no critical or high remain in what ships.</div></div></div>
+    <div class="row"><span class="id">S3</span><span class="sev h">High</span><div><h3>Unused packages <code>ai</code> and <code>@google/genai</code></h3><p>Nothing imports them, but they ship and add advisories (<code>jsondiffpatch</code> XSS).</p><div class="fix">Remove both from <code>apps/web/package.json</code>.</div></div></div>
+    <div class="row"><span class="id">S4</span><span class="sev h">High</span><div><h3>The login is checked in one place only</h3><p>API routes trust the middleware completely, which is why S1 exposes everything.</p><div class="fix">Add a <code>requireAuth()</code> check at the top of every route handler (and the report page data calls), so a middleware failure can't open the API.</div></div></div>
+    <div class="row"><span class="id">S5</span><span class="sev m">Medium</span><div><h3>Weak, shared passcode</h3><p>One 8-character passcode protects everything; no second factor. It was also used in test requests during this session.</p><div class="fix">Change it to a 12+ character passphrase before launch. Later: add a passkey or one-time code.</div></div></div>
+    <div class="row"><span class="id">S6</span><span class="sev m">Medium</span><div><h3>Sessions can't be revoked</h3><p>A session token is valid for 30 days and logging out only clears the browser cookie. A leaked mobile token stays valid.</p><div class="fix">Add a session version in the signed token and a "sign out everywhere" button that bumps it; shorten mobile sessions to 7 days with renewal.</div></div></div>
+    <div class="row"><span class="id">S7</span><span class="sev m">Medium</span><div><h3>Login rate limit lives in memory</h3><p>It resets on restart and depends on <code>TRUSTED_PROXY_HOPS</code> being right for your host.</p><div class="fix">Keep as is for one instance; document the setting (done) and alert on repeated 429s.</div></div></div>
+    <div class="row"><span class="id">S8</span><span class="sev l">Low</span><div><h3>No script CSP; fonts load from Google at runtime</h3><p>Only framing and form directives are set. <code>globals.css</code> imports fonts from <code>fonts.googleapis.com</code>, which leaks visits to a third party and fails offline.</p><div class="fix">Self-host the fonts (<code>next/font/local</code>), then add a nonce-based CSP.</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>2. Ledger data</h2>
+  <div class="tbl">
+    <div class="row"><span class="id">D1</span><span class="sev h">High</span><div><h3>Transfers don't balance: 247 of 651 are unpaired, net +$26,996</h3><p>Only 404 transfer rows pair up (same day, opposite amount, different account). "Transfers" mixes internal moves, card payments (106 "Credit Card Payments"), e-transfers to and from other people, and tuition. Totals, income and spending are all off because of it.</p><div class="fix">Split into "internal transfer" (paired, excluded from totals) and "e-transfer in / out" (counted as income or spending). Auto-pair on import.</div></div></div>
+    <div class="row"><span class="id">D2</span><span class="sev h">High</span><div><h3>20 rows where the type contradicts the sign</h3><p>For example Uber on 2026-10-13: an "Inflow" of −$5.64 and an "Outflow" of +$5.64 (a refund pair), and Amazon refunds of +$68.13 and +$37.32 (Mar 2025) labelled Outflow. They show up as "positive outflows" in reports.</p><div class="fix">Add a data-health screen that lists these and fixes them in one click (or set type from the sign on import).</div></div></div>
+    <div class="row"><span class="id">D3</span><span class="sev m">Medium</span><div><h3>25 possible duplicate groups (40 extra rows)</h3><p>The largest: eight identical "PAYPAL −$100" debits and eight "+$100" reversals on 2026-07-07 (CIBC eAdvantage). They may be real retries that net to zero, but they should be confirmed. Also 3× the same ATM fee on 2025-11-03.</p><div class="fix">Show duplicate groups in the data-health screen; make CSV import skip rows matching date + amount + description + account.</div></div></div>
+    <div class="row"><span class="id">D4</span><span class="sev m">Medium</span><div><h3>"Adjustments not to consider" is counted anyway</h3><p>86 rows use a category that means "ignore me", but the dashboard charts and totals still include them (only budgets skip them).</p><div class="fix">Replace the category with an <code>exclude_from_reports</code> flag honoured by every total, chart and export.</div></div></div>
+    <div class="row"><span class="id">D5</span><span class="sev m">Medium</span><div><h3>The review queue is too big and never clears</h3><p>654 rows (16%) match the rule, and there's no "reviewed" mark: a legitimate refund stays in the queue forever.</p><div class="fix">Add <code>reviewed_at</code>; the queue shows only unreviewed rows; "Mark reviewed" in bulk; tighten the rule.</div></div></div>
+    <div class="row"><span class="id">D6</span><span class="sev m">Medium</span><div><h3>CIBC eAdvantage Savings is $116.40 off its statement</h3><p>The ledger rows add up to +$116.40 but the account balance is $0, so the app invented an opening balance of −$116.40. History is probably missing. Three accounts have had no activity for months (last: Jul 31, May 29, Apr 20).</p><div class="fix">Import the missing statement, or confirm and note the adjustment. Archive inactive accounts.</div></div></div>
+    <div class="row"><span class="id">D7</span><span class="sev m">Medium</span><div><h3>Cards have no APR or due date</h3><p>All six cards lack an APR and five lack a due date, so the payoff planner and due dates run on estimates. Amex Green starts from a $5,562.58 balance that predates the imported rows.</p><div class="fix">Enter them (the account dialog now has the fields) from your statements.</div></div></div>
+    <div class="row"><span class="id">D8</span><span class="sev l">Low</span><div><h3>Messy categories and stale running balances</h3><p>318 "Miscellaneous" rows, the typo "Tution Payments" (22 rows), "Credit Card Payments" overlapping Transfers, 2 zero-amount rows, and 2 accounts whose last running balance differs from the account balance.</p><div class="fix">Rename and merge categories; add rules that categorize by merchant on import; delete zero rows; recalculate running balances.</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>3. App bugs and made-up values</h2>
+  <div class="tbl">
+    <div class="row"><span class="id">B1</span><span class="sev h">High</span><div><h3>The cash forecast assumes your pay</h3><p><code>/api/forecast</code> hard-codes a $751.30 payday every 14 days from 2026-10-16 and $36.50 a day of spending. It will be wrong when your pay or schedule changes, and it also uses the server's date, which in Docker is UTC.</p><div class="fix">Detect recurring income from the ledger (or a Settings screen for pay amount and schedule); average real spending; send the client's date and timezone.</div></div></div>
+    <div class="row"><span class="id">B2</span><span class="sev h">High</span><div><h3>"Connect Bank" is a simulation</h3><p>The button opens a fake Plaid screen. In production, users would think a bank is connected.</p><div class="fix">Remove it until a real integration exists, or label it clearly as "demo".</div></div></div>
+    <div class="row"><span class="id">B3</span><span class="sev m">Medium</span><div><h3>Sorting by amount ignores size</h3><p>It sorts the signed value, so descending shows refunds first and the biggest expenses last. The October outflow report started with +$6.77 and +$5.64.</p><div class="fix">Sort by absolute amount (or offer "largest spend" and "largest income").</div></div></div>
+    <div class="row"><span class="id">B4</span><span class="sev m">Medium</span><div><h3>Hard-coded claims in the interface</h3><p>"4,159 transactions" appears in Analytics, the AI prompt and the AI fallback reply; mobile "More" says "Synced with Supabase…4,158". Settings shows bill reminders as "Active" although no reminder job runs, and has a Supabase setup guide for something not in use.</p><div class="fix">Compute counts; remove or truthfully label the reminders and the Supabase section.</div></div></div>
+    <div class="row"><span class="id">B5</span><span class="sev m">Medium</span><div><h3>Old links lose their search</h3><p><code>/transactions?search=x</code>, <code>/bills</code> etc. redirect without keeping the query string.</p><div class="fix">Forward the query string in the redirect pages.</div></div></div>
+    <div class="row"><span class="id">B6</span><span class="sev m">Medium</span><div><h3>Two data stores, only partly kept in sync</h3><p>If <code>DATABASE_URL</code> is set, only transactions and categories reach Postgres. Accounts, bills, credit reports, opening balances and the trash never do, so the two can disagree.</p><div class="fix">Pick one source of truth (see phase 4). Until then, don't set <code>DATABASE_URL</code> in production.</div></div></div>
+    <div class="row"><span class="id">B7</span><span class="sev m">Medium</span><div><h3>The ledger file will keep growing and blocking</h3><p>3.26 MB today, saved pretty-printed (about 40% larger than needed) and fully rewritten on every change. About 2,100 new rows a year adds around 1.3 MB a year. AI chat history has no limit.</p><div class="fix">Save compact JSON, debounce writes, keep the last 100 chat messages, and move to a database in phase 4.</div></div></div>
+    <div class="row"><span class="id">B8</span><span class="sev l">Low</span><div><h3>Code quality</h3><p>122 uses of <code>any</code>; the <code>lint</code> script has no ESLint installed so it can't run; the seed script holds sample bills, a sample credit report and a "Hello Henish" chat message.</p><div class="fix">Add ESLint with a strict config and fix <code>any</code> in API routes first; make the seed script opt-in.</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>4. Mobile app</h2>
+  <div class="tbl">
+    <div class="row"><span class="id">M1</span><span class="sev c">Critical</span><div><h3>It can't be built for the stores yet</h3><p><code>app.json</code> points to <code>./assets/icon.png</code>, but there is no assets folder, and there is no <code>eas.json</code>.</p><div class="fix">Create the icon, adaptive icon and splash assets; add <code>eas.json</code> with development, preview and production profiles; set bundle IDs and versions.</div></div></div>
+    <div class="row"><span class="id">M2</span><span class="sev h">High</span><div><h3>Never run on a device or emulator</h3><p>The new login, offline banner, Bills and Sign-out screens pass the type-check but haven't been tried. <code>EXPO_PUBLIC_API_URL</code> isn't set, so real phones can't reach a server.</p><div class="fix">Run on an Android emulator and a real phone against a staging server; fix what breaks; set the API URL per build profile.</div></div></div>
+    <div class="row"><span class="id">M3</span><span class="sev m">Medium</span><div><h3>No biometric lock; push notifications do nothing</h3><p>Anyone holding an unlocked phone sees balances (they are blurred by default, but one tap reveals them). The app asks for notification permission but no server sends any.</p><div class="fix">Add Face ID / fingerprint on app open (<code>expo-local-authentication</code>); either build bill reminders or stop asking for the permission.</div></div></div>
+    <div class="row"><span class="id">M4</span><span class="sev m">Medium</span><div><h3>Mobile has fewer features than web</h3><p>Transactions on mobile has no date range, filters, export or bulk actions, and no way to add a transaction.</p><div class="fix">Add a date range and filter sheet, search across all rows, and "add transaction" after the web fixes are shipped.</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>5. Operations and quality</h2>
+  <div class="tbl">
+    <div class="row"><span class="id">O1</span><span class="sev h">High</span><div><h3>Docker image has never been built</h3><p>Docker Desktop was off. The Dockerfile was repaired this session but is untested, including the standalone output path in a monorepo.</p><div class="fix">Build it, run it with a volume, log in, add and delete a transaction, restart, and confirm the data survived.</div></div></div>
+    <div class="row"><span class="id">O2</span><span class="sev h">High</span><div><h3>No backups, monitoring or alerts</h3><p>The whole ledger is one file. There is no scheduled copy, no error tracking, no uptime check.</p><div class="fix">Nightly encrypted copy off the server (keep 30 days) and a restore test; Sentry (or similar) for errors; an uptime check on <code>/api/health</code>.</div></div></div>
+    <div class="row"><span class="id">O3</span><span class="sev m">Medium</span><div><h3>No CI and no browser tests</h3><p>Nothing runs the tests, type-check, build or audit on a change, and no test clicks through the real app.</p><div class="fix">GitHub Actions: install, typecheck, test, build, <code>pnpm audit</code>. Add Playwright smoke tests for login, Activity filters, export and bulk actions.</div></div></div>
+    <div class="row"><span class="id">O4</span><span class="sev m">Medium</span><div><h3>Must run as exactly one instance</h3><p>The ledger lives in memory and one file; two instances would overwrite each other. The app also isn't covered by a staging environment.</p><div class="fix">Max instances = 1 (documented in <code>DEPLOY.md</code>); stand up a staging copy with test data.</div></div></div>
+    <div class="row"><span class="id">O5</span><span class="sev l">Low</span><div><h3>Everything is still uncommitted</h3><p>This session's work (about 50 files) and the earlier changes aren't in git, and there's no remote.</p><div class="fix">Commit in logical pieces, create a private remote, protect the main branch.</div></div></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">The plan</span>
+  <h2>Phases to production</h2>
+  <p class="muted">Effort assumes one developer. Phases 0 and 1 gate going live; the rest can follow in order.</p>
+  <div class="road">
+
+    <div class="ph block"><div class="hd"><h3><b>P0</b>Close the security holes (blocks launch)</h3><span>1 day</span></div><ul>
+      <li><b>Upgrade Next.js</b> to the latest 15.5.x; rebuild; run all tests</li>
+      <li><b>Add <code>requireAuth()</code></b> to every API route handler and the report data calls</li>
+      <li><b>Remove</b> the unused <code>ai</code> and <code>@google/genai</code> packages</li>
+      <li><b>Change the passcode</b> to a 12+ character passphrase; set <code>AUTH_SECRET</code> in your host's secret manager</li>
+      <li><b>Re-test</b> the bypass header on the staging build, and run <code>pnpm audit --prod</code></li>
+    </ul><div class="dw"><b>Done when:</b> the <code>x-middleware-subrequest</code> request returns 401 for API and pages, and the audit shows no critical advisories in the web app.</div></div>
+
+    <div class="ph block"><div class="hd"><h3><b>P1</b>Make the numbers trustworthy (blocks launch)</h3><span>3–4 days</span></div><ul>
+      <li><b>Transfers:</b> pair internal transfers and exclude them from totals; classify e-transfers in/out as income or spending (D1)</li>
+      <li><b>Data-health screen:</b> wrong type vs sign, possible duplicates, zero amounts, unreviewed items, with one-click fixes (D2, D3, D8)</li>
+      <li><b><code>exclude_from_reports</code> flag</b> honoured by totals, charts, budgets and export (D4)</li>
+      <li><b>"Reviewed" flag</b> and bulk "Mark reviewed" so the queue empties (D5)</li>
+      <li><b>Fix sorting by amount</b> to use size (B3)</li>
+      <li><b>Forecast from your real data:</b> detect pay from the ledger or add a Settings screen; use real average spending (B1)</li>
+      <li><b>You enter</b> each card's APR and due date; resolve the $116.40 gap (D6, D7)</li>
+    </ul><div class="dw"><b>Done when:</b> the transfer net is about zero, the review queue is under 50 and clearable, the forecast uses your actual pay, and totals match a statement for one full month.</div></div>
+
+    <div class="ph"><div class="hd"><h3><b>P2</b>Remove anything fake or misleading</h3><span>1–2 days</span></div><ul>
+      <li>Remove or label the simulated <b>Connect Bank</b> (B2)</li>
+      <li>Replace hard-coded counts and the "Active" reminder claims; drop the Supabase guide (B4)</li>
+      <li>Forward the query string in old-route redirects (B5)</li>
+      <li>Make the seed script opt-in and free of personal sample data (B8)</li>
+      <li>Self-host fonts (S8)</li>
+    </ul><div class="dw"><b>Done when:</b> a search for "4,159", "Supabase" and "simulate" in the source finds nothing that reaches users.</div></div>
+
+    <div class="ph"><div class="hd"><h3><b>P3</b>Deploy to staging and prove it</h3><span>2–3 days</span></div><ul>
+      <li><b>Build and run the Docker image</b> with a volume; add, edit, delete, restart, confirm data persists (O1)</li>
+      <li><b>CI</b> on every push: install, typecheck, test, build, audit (O3)</li>
+      <li><b>Playwright smoke tests:</b> login, filter by date, export CSV, report page, bulk type change, undo delete</li>
+      <li><b>Backups:</b> nightly encrypted copy, 30 days kept, one restore rehearsal (O2)</li>
+      <li><b>Monitoring:</b> error tracking and an uptime check on <code>/api/health</code>; alert on repeated login failures</li>
+      <li><b>HTTPS</b> with your domain; max one instance (O4)</li>
+    </ul><div class="dw"><b>Done when:</b> a fresh deploy from CI works, a restored backup opens correctly, and an error you cause on purpose shows up in monitoring.</div></div>
+
+    <div class="ph"><div class="hd"><h3><b>P4</b>Mobile release</h3><span>5–7 days</span></div><ul>
+      <li><b>Assets and build:</b> icon, adaptive icon, splash, <code>eas.json</code>, bundle IDs, versions (M1)</li>
+      <li><b>Test on a real phone</b> against staging: login, offline banner, bills, sign-out (M2)</li>
+      <li><b>Biometric lock</b> on open; decide on push notifications (M3)</li>
+      <li><b>Feature parity:</b> date range, filters, search across all rows, add transaction (M4)</li>
+      <li><b>Distribute</b> through TestFlight / an internal Android track first</li>
+    </ul><div class="dw"><b>Done when:</b> a preview build installs on your phone, shows live data, locks with Face ID, and works offline with the banner.</div></div>
+
+    <div class="ph"><div class="hd"><h3><b>P5</b>Choose the long-term database</h3><span>4–6 days</span></div><ul>
+      <li><b>Decide:</b> stay on the single file (one user, single instance) or make Postgres the only source of truth</li>
+      <li>If Postgres: migrate accounts, bills, reports, opening balances and trash; remove the JSON path; run the migration on a copy first (B6)</li>
+      <li>If staying on the file: compact saves, debounced writes, chat-history cap (B7)</li>
+      <li><b>Sessions you can revoke</b> and a "sign out everywhere" button (S6)</li>
+      <li><b>Second factor</b> (passkey or one-time code) (S5)</li>
+    </ul><div class="dw"><b>Done when:</b> there is exactly one store of record, and a lost server can be rebuilt from a backup in under 30 minutes.</div></div>
+
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Launch checklist</span>
+  <h2>Go live when every box is ticked</h2>
+  <div class="check"><ul>
+    <li>Next.js upgraded; the middleware bypass test returns 401 on API and pages</li>
+    <li>Every API route checks the session itself</li>
+    <li><code>pnpm audit --prod</code> shows no critical or high issues in what ships</li>
+    <li>New passcode (12+ characters) and a 32+ character <code>AUTH_SECRET</code> set in the host's secret store; nothing secret in git</li>
+    <li>Transfers paired, review queue cleared, exclude-from-reports in effect, month totals match a statement</li>
+    <li>Card APRs and due dates entered; forecast uses your real pay</li>
+    <li>No simulated or hard-coded features visible to users</li>
+    <li>Docker image built and tested with a volume; data survives a restart</li>
+    <li>HTTPS on your domain; exactly one instance</li>
+    <li>CI green on the release commit</li>
+    <li>Nightly backup running and a restore tested</li>
+    <li>Error tracking and uptime alerts working</li>
+    <li>Mobile preview build tested on a real phone (if mobile is part of launch)</li>
+    <li>Everything committed to git with a private remote</li>
+  </ul></div>
+</section>
+
+<section>
+  <h2>Decisions I need from you</h2>
+  <div class="dec"><ol>
+    <li><b>Where will it run?</b> (Cloud Run, a VM, Vercel, a home server.) This decides how backups, volumes and the single-instance rule are done.</li>
+    <li><b>One user or several?</b> One user can stay on the file; several users means Postgres and real accounts.</li>
+    <li><b>Is mobile part of launch,</b> or does web go first?</li>
+    <li><b>Do you want real bank connections?</b> If so we'd integrate Plaid or Flinks properly (it needs an account and costs money); if not, the fake button goes.</li>
+    <li><b>How is your pay arranged?</b> Garda biweekly at about $751.30? I'll detect it from the ledger unless you want to enter it.</li>
+  </ol></div>
+</section>
+
+</div>
+</body>
+</html>

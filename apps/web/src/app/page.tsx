@@ -22,27 +22,13 @@ export default function HomePage() {
     },
   });
 
-  // Calculate live balances
-  const accounts = accountsData?.accounts || [];
-  let liveCash = 0;
-  let liveDebt = 0;
-
-  for (const acc of accounts) {
-    if (acc.type === 'bank') {
-      liveCash += Math.max(0, acc.balance);
-    } else if (acc.type === 'credit_card') {
-      if (acc.balance > 0) {
-        liveDebt += acc.balance;
-      } else {
-        // Overpaid card is an asset
-        liveCash += Math.abs(acc.balance);
-      }
-    }
-  }
-
-  // Use live balances if available, fallback to audited canonicals
-  const cashInBanks = liveCash > 0 ? liveCash : 2579.77;
-  const debtOnCards = liveDebt > 0 ? liveDebt : 15558.16;
+  // Cash is what sits in bank accounts (overdrafts count against it).
+  // Owed is card debt net of any card credit balances, so cash − owed = net worth.
+  const accounts: any[] = accountsData?.accounts || [];
+  const bankAccounts = accounts.filter((a) => a.type === 'bank');
+  const cards = accounts.filter((a) => a.type === 'credit_card');
+  const cashInBanks = bankAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+  const debtOnCards = cards.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
   const netWorth = cashInBanks - debtOnCards;
 
   return (
@@ -53,6 +39,9 @@ export default function HomePage() {
           cashInBanks={cashInBanks}
           debtOnCards={debtOnCards}
           netWorth={netWorth}
+          bankCount={bankAccounts.length}
+          cardCount={cards.length}
+          isLoading={!accountsData}
         />
         <NeedsYouWidget />
       </div>

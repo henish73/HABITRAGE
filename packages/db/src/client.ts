@@ -14,23 +14,29 @@ import {
   CategoryItem,
   recalculateRunningBalances,
   formatCAD,
+  needsReview,
 } from '@financeos/shared';
 
 dotenv.config();
 
+/**
+ * Location of the JSON ledger. FINANCEOS_DATA_FILE wins (use it in containers,
+ * pointed at a mounted volume). Otherwise the first existing file in the usual
+ * monorepo locations, falling back to ./data/seed_cache.json.
+ */
 function getCachePath(): string {
+  if (process.env.FINANCEOS_DATA_FILE) return path.resolve(process.env.FINANCEOS_DATA_FILE);
   const candidates = [
     path.resolve(process.cwd(), 'data/seed_cache.json'),
     path.resolve(process.cwd(), '../../data/seed_cache.json'),
     path.resolve(process.cwd(), '../data/seed_cache.json'),
     path.resolve(__dirname, '../../../data/seed_cache.json'),
     path.resolve(__dirname, '../../data/seed_cache.json'),
-    'd:/Habitrage/data/seed_cache.json',
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
   }
-  return 'd:/Habitrage/data/seed_cache.json';
+  return candidates[0];
 }
 
 // Global Prisma instance singleton
@@ -71,6 +77,29 @@ interface CacheStore {
   creditReports: CreditReport[];
   aiChatHistory: AiChatMessage[];
   stats: any;
+  trash?: TrashedTransaction[];
+}
+
+export interface TrashedTransaction {
+  transaction: Transaction;
+  deletedAt: string;
+}
+
+export const TRASH_RETENTION_DAYS = 30;
+
+function moveToTrash(store: CacheStore, txs: Transaction[]) {
+  if (txs.length === 0) return;
+  const now = Date.now();
+  const cutoff = now - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const kept = (store.trash || []).filter(
+    (t) => new Date(t.deletedAt).getTime() >= cutoff && !txs.some((x) => x.id === t.transaction.id)
+  );
+  const deletedAt = new Date(now).toISOString();
+  for (const tx of txs) {
+    const { account, ...plain } = tx as Transaction & { account?: unknown };
+    kept.push({ transaction: plain as Transaction, deletedAt });
+  }
+  store.trash = kept;
 }
 
 let memoryStore: CacheStore | null = null;
@@ -127,7 +156,11 @@ function saveMemoryStore() {
   if (!memoryStore) return;
   const cachePath = getCachePath();
   try {
-    fs.writeFileSync(cachePath, JSON.stringify(memoryStore, null, 2), 'utf-8');
+    // Write to a temp file and rename, so a crash mid-write can't corrupt the ledger.
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    const tmpPath = `${cachePath}.${process.pid}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(memoryStore, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, cachePath);
     const stat = fs.statSync(cachePath);
     lastCacheMtime = stat.mtimeMs;
   } catch (e) {
@@ -194,6 +227,8 @@ export const db = {
     const store = loadMemoryStore();
     const newAccount: Account = {
       ...data,
+      // The balance a new account starts with is its opening balance; later transactions add to it.
+      opening_balance: data.opening_balance ?? data.balance ?? 0,
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -337,6 +372,11 @@ export const db = {
       txs = txs.filter(t => t.source_file === params.source_file);
     }
 
+    // "To review" queue (shared rule with the web UI)
+    if (params.needs_review) {
+      txs = txs.filter(t => needsReview(t));
+    }
+
     // Populate account metadata map for sorting
     const accMap = new Map(store.accounts.map(a => [a.id, a]));
 
@@ -371,7 +411,7 @@ export const db = {
 
     const total = txs.length;
     const page = Math.max(1, params.page || 1);
-    const limit = Math.max(1, Math.min(params.limit || 50, 1000));
+    const limit = Math.max(1, Math.min(params.limit || 50, 50000));
     const totalPages = Math.ceil(total / limit) || 1;
 
     const paginated = txs.slice((page - 1) * limit, page * limit).map(t => ({
@@ -564,6 +604,7 @@ export const db = {
     }
 
     store.transactions = store.transactions.filter(t => t.id !== id);
+    moveToTrash(store, [tx]);
     if (tx.status === 'posted') {
       this.recalculateAccountBalances(tx.account_id);
     }
@@ -582,6 +623,73 @@ export const db = {
     }
 
     return true;
+  },
+
+  /** Deleted transactions still inside the retention window, newest first. */
+  async getTrash(): Promise<TrashedTransaction[]> {
+    const store = loadMemoryStore();
+    const cutoff = Date.now() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    return (store.trash || [])
+      .filter((t) => new Date(t.deletedAt).getTime() >= cutoff)
+      .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+  },
+
+  /**
+   * Puts trashed transactions back exactly as they were (same id, account and
+   * fields) and recalculates the affected balances. Returns those restored.
+   */
+  async restoreTransactions(ids: string[]): Promise<Transaction[]> {
+    const store = loadMemoryStore();
+    const wanted = new Set(ids);
+    const cutoff = Date.now() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const restored: Transaction[] = [];
+    const remaining: TrashedTransaction[] = [];
+    for (const item of store.trash || []) {
+      const live = new Date(item.deletedAt).getTime() >= cutoff;
+      if (live && wanted.has(item.transaction.id) && store.accounts.some(a => a.id === item.transaction.account_id)) {
+        if (!store.transactions.some(t => t.id === item.transaction.id)) {
+          store.transactions.unshift(item.transaction);
+          restored.push(item.transaction);
+        }
+      } else if (live) {
+        remaining.push(item);
+      }
+    }
+    if (restored.length === 0) return [];
+    store.trash = remaining;
+    for (const accountId of new Set(restored.map(t => t.account_id))) {
+      this.recalculateAccountBalances(accountId);
+    }
+    saveMemoryStore();
+
+    const isPg = await checkPostgres();
+    if (isPg) {
+      for (const tx of restored) {
+        try {
+          await prisma.transaction.create({
+            data: {
+              id: tx.id,
+              account_id: tx.account_id,
+              date: tx.date,
+              description: tx.description || '',
+              merchant: tx.merchant || '',
+              category: tx.category || 'General',
+              type: tx.type || 'Outflow',
+              amount: tx.amount,
+              debit: tx.debit ?? null,
+              credit: tx.credit ?? null,
+              running_balance: tx.running_balance ?? null,
+              status: tx.status || 'posted',
+              reference_number: tx.reference_number ?? null,
+              source_file: tx.source_file ?? null,
+            },
+          });
+        } catch (err) {
+          console.error('Error restoring transaction in Postgres:', err);
+        }
+      }
+    }
+    return restored;
   },
 
   async bulkUpdateTransactions(
@@ -712,6 +820,7 @@ export const db = {
     });
 
     const initialLen = store.transactions.length;
+    moveToTrash(store, store.transactions.filter(t => idSet.has(t.id)));
     store.transactions = store.transactions.filter(t => !idSet.has(t.id));
     const deletedCount = initialLen - store.transactions.length;
 

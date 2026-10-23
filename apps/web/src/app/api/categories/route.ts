@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
+import { apiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,9 +15,15 @@ export async function GET(req: Request) {
     }
 
     const categories = await db.getCategories();
+    if (searchParams.get("withCounts") === "true") {
+      const withCounts = await Promise.all(
+        categories.map(async (c) => ({ ...c, count: await db.getCategoryUsageCount(c.name) }))
+      );
+      return NextResponse.json({ success: true, categories: withCounts.filter((c) => c.count > 0 || c.id) });
+    }
     return NextResponse.json({ success: true, categories });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
 
@@ -38,7 +45,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, category: created }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
 
@@ -85,6 +92,6 @@ export async function DELETE(req: Request) {
       deletedCategory: nameOrId,
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }

@@ -17,8 +17,9 @@ import { useRouter } from 'next/navigation';
 export function Topbar() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [greeting, setGreeting] = useState('Good evening');
-  const [formattedDate, setFormattedDate] = useState('Wednesday, October 21 · Synced 2 min ago');
+  const [greeting, setGreeting] = useState('Good day');
+  const [formattedDate, setFormattedDate] = useState('');
+  const [syncSeconds, setSyncSeconds] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -27,10 +28,21 @@ export function Topbar() {
     else if (hour < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
 
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' };
-    const dateStr = new Date().toLocaleDateString('en-CA', options);
-    setFormattedDate(`${dateStr} · Synced 2 min ago`);
-  }, []);
+    const updateLabel = () => {
+      const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+      const dateStr = new Date().toLocaleDateString('en-CA', options);
+      const mins = Math.floor(syncSeconds / 60);
+      const syncStr = mins < 1 ? 'Synced just now' : `Synced ${mins} min${mins === 1 ? '' : 's'} ago`;
+      setFormattedDate(`${dateStr} · ${syncStr}`);
+    };
+
+    updateLabel();
+    const interval = setInterval(() => {
+      setSyncSeconds((prev) => prev + 30);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [syncSeconds]);
 
   const {
     isMasked,

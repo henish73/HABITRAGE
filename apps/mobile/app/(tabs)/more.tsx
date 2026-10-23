@@ -1,14 +1,24 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert, Linking } from "react-native";
+import { API_BASE, useSession } from "../../src/lib/api";
 import { ShieldCheck, Sparkles, BarChart2, Sliders, ArrowRight, Download, RefreshCw } from "lucide-react-native";
 
 export default function MobileMore() {
-  const handleFeatureNotice = (feature: string) => {
-    Alert.alert(
-      feature,
-      "This module communicates in real-time with your FinanceOS Next.js & Supabase Postgres backend.",
-      [{ text: "OK" }]
+  const signOut = useSession((st) => st.signOut);
+  const webBase = API_BASE.replace(/\/api$/, "");
+
+  // These sections live in the web app for now; open them there.
+  const openOnWeb = (path: string) => {
+    Linking.openURL(`${webBase}${path}`).catch(() =>
+      Alert.alert("Can't open the web app", `Open ${webBase}${path} in your browser.`)
     );
+  };
+
+  const confirmSignOut = () => {
+    Alert.alert("Sign out?", "You'll need your passcode to open FinanceOS again.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign out", style: "destructive", onPress: () => signOut() },
+    ]);
   };
 
   return (
@@ -29,35 +39,35 @@ export default function MobileMore() {
         <View style={styles.menuSection}>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => handleFeatureNotice("Credit Report Vault")}
+            onPress={() => openOnWeb("/wallet")}
           >
             <View style={[styles.menuIcon, { backgroundColor: "#ECFDF5" }]}>
               <ShieldCheck size={20} color="#10B981" />
             </View>
             <View style={styles.menuTextCol}>
               <Text style={styles.menuTitle}>Credit Report Vault</Text>
-              <Text style={styles.menuSubtitle}>Equifax 745 • 18.5% Utilization</Text>
+              <Text style={styles.menuSubtitle}>Upload and review reports on the web</Text>
             </View>
             <ArrowRight size={16} color="#94A3B8" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => handleFeatureNotice("AI Financial Assistant")}
+            onPress={() => openOnWeb("/?copilot=1")}
           >
             <View style={[styles.menuIcon, { backgroundColor: "#FEF3C7" }]}>
               <Sparkles size={20} color="#D97706" />
             </View>
             <View style={styles.menuTextCol}>
               <Text style={styles.menuTitle}>AI Copilot Assistant</Text>
-              <Text style={styles.menuSubtitle}>Autonomous CRUD & Ledger Search</Text>
+              <Text style={styles.menuSubtitle}>Ask questions about your money</Text>
             </View>
             <ArrowRight size={16} color="#94A3B8" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => handleFeatureNotice("Deep Analytics")}
+            onPress={() => openOnWeb("/analytics")}
           >
             <View style={[styles.menuIcon, { backgroundColor: "#F0F9FF" }]}>
               <BarChart2 size={20} color="#0284C7" />
@@ -71,7 +81,7 @@ export default function MobileMore() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => handleFeatureNotice("System Settings")}
+            onPress={() => openOnWeb("/settings")}
           >
             <View style={[styles.menuIcon, { backgroundColor: "#F8FAFC" }]}>
               <Sliders size={20} color="#475569" />
@@ -91,6 +101,12 @@ export default function MobileMore() {
             Built on Turborepo, Next.js 15, and Expo. Synced with Supabase Free Postgres tier (500MB). 4,158 real reconciled transactions.
           </Text>
         </View>
+        <TouchableOpacity style={styles.menuItem} onPress={confirmSignOut} accessibilityRole="button">
+          <View style={styles.menuTextCol}>
+            <Text style={[styles.menuTitle, { color: "#C23A2E" }]}>Sign out</Text>
+            <Text style={styles.menuSubtitle}>Removes your session from this device</Text>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

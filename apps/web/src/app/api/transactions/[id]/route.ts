@@ -16,11 +16,12 @@ export async function GET(
     }
     return NextResponse.json({ success: true, transaction: tx });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
 
 import { createTransactionSchema } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
 
 export async function PUT(
   req: Request,
@@ -38,7 +39,7 @@ export async function PUT(
     }
     return NextResponse.json({ success: true, transaction: updated });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return apiError(error, 400);
   }
 }
 
@@ -48,12 +49,17 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const success = await db.deleteTransaction(id);
-    if (!success) {
+    const existing = await db.getTransactionById(id);
+    if (!existing) {
       return NextResponse.json({ success: false, error: 'Transaction not found' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, message: 'Transaction deleted' });
+
+    const success = await db.deleteTransaction(id);
+    if (!success) {
+      return NextResponse.json({ success: false, error: 'Failed to delete transaction' }, { status: 500 });
+    }
+    return NextResponse.json({ success: true, message: 'Moved to trash. You can restore it for 30 days.', transaction: existing });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }

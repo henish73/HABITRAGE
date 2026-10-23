@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinanceOS Production Plan v2</title>
+<style>
+/* Layout: one reading column. Decisions and the big change first, then phases in order, then risks and the launch checklist. */
+:root{
+  --canvas:#F3F5F9; --surface:#FFFFFF; --raised:#F8FAFC; --line:#DFE5EE; --line-soft:#EAEFF5;
+  --ink:#0E1726; --muted:#5A6B80; --faint:#8A99AD;
+  --teal:#0E8A78; --teal-soft:#E0F2EE;
+  --pos:#16835A; --neg:#C23A2E; --warn:#B8770A; --info:#2D5FA8;
+  --pos-soft:#E2F2EA; --neg-soft:#FBE8E5; --warn-soft:#FBF0DA; --info-soft:#E4ECF8;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45; --info:#7FA8EC;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D; --info-soft:#152238;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:#070C15; --surface:#0E1522; --raised:#121B2B; --line:#1F2B3F; --line-soft:#172234;
+  --ink:#E7EEF8; --muted:#8FA0B7; --faint:#62738C;
+  --teal:#39C9B2; --teal-soft:#0F2E2A;
+  --pos:#4CC38A; --neg:#F2796C; --warn:#E8AE45; --info:#7FA8EC;
+  --pos-soft:#0F2A1E; --neg-soft:#331614; --warn-soft:#32250D; --info-soft:#152238;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--ui);font-size:15.5px;line-height:1.6;
+  padding:48px max(16px,env(safe-area-inset-right,0px)) 96px max(16px,env(safe-area-inset-left,0px))}
+.page{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.02em}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.06;font-weight:800;letter-spacing:-.04em}
+h2{font-size:clamp(23px,3vw,30px);font-weight:700;letter-spacing:-.03em}
+h3{font-size:16px;font-weight:600}
+p{margin:0;max-width:70ch}
+code{font-family:var(--mono);font-size:.85em;background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:1px 5px;word-break:break-word}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.lede{font-size:17px;color:var(--muted)}
+.muted{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+.card.alert{border-color:var(--warn);background:var(--warn-soft)}
+.card.alert h3{color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;padding:11px 16px;border-top:1px solid var(--line-soft);vertical-align:top}
+th{border-top:0;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--raised)}
+td:first-child{font-weight:600}
+td .pick{color:var(--teal);font-weight:600}
+.road{display:flex;flex-direction:column;border-left:2px solid var(--line);margin-left:9px}
+.ph{position:relative;padding:0 0 30px 30px;display:flex;flex-direction:column;gap:8px}
+.ph::before{content:"";position:absolute;left:-9px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--canvas);border:2px solid var(--teal)}
+.ph.block::before{border-color:var(--neg);background:var(--neg)}
+.ph.later::before{border-style:dashed;border-color:var(--faint)}
+.ph:last-child{padding-bottom:0}
+.ph .hd{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.ph .hd span{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.ph h3 b{font-family:var(--mono);color:var(--teal);margin-right:8px;font-size:13px}
+.ph.block h3 b{color:var(--neg)}
+.ph ul{margin:0;padding-left:18px;color:var(--muted);font-size:14.5px;display:flex;flex-direction:column;gap:4px}
+.ph ul b{color:var(--ink);font-weight:600}
+.ph .dw{font-size:13.5px;border:1px dashed var(--line);border-radius:10px;padding:8px 12px;background:var(--surface)}
+.ph .dw b{color:var(--teal)}
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle}
+.check{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.check ul{margin:0;padding:0;list-style:none;display:grid;gap:8px;font-size:14.5px}
+.check li{display:flex;gap:10px}
+.check li::before{content:"";flex:none;width:16px;height:16px;margin-top:3px;border:2px solid var(--line);border-radius:4px}
+.flow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px}
+.flow span.node{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.flow span.arrow{color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header style="display:flex;flex-direction:column;gap:12px">
+  <span class="eyebrow">FinanceOS · Production plan v2 · 22 Oct 2026</span>
+  <h1>Web first on Vercel or Cloud Run, manual entry only, ready to grow.</h1>
+  <p class="lede">Your answers change the plan in one important way: both Vercel and Cloud Run lose their disk when they restart, so the single-file ledger has to become a real database before launch, not later. That also gives you the room to add users in the future. Everything else gets simpler, because bank connections are out.</p>
+</header>
+
+<section>
+  <span class="eyebrow">Your decisions and what each one changes</span>
+  <div class="tbl"><table>
+    <thead><tr><th>You said</th><th>What it means for the plan</th></tr></thead>
+    <tbody>
+      <tr><td>Cloud Run or Vercel</td><td>Both are serverless: no permanent disk, several copies can run at once, memory is wiped on restart. So: <b>Postgres becomes the only data store, now.</b> The JSON file, the in-memory trash and the in-memory login limiter all go.</td></tr>
+      <tr><td>Just you now, scalable later</td><td>One login for launch. But the new database gets an <code>owner_id</code> on every table from day one, so adding users later is a code change, not a data migration. Real accounts and 2FA are the last phase.</td></tr>
+      <tr><td>Web and mobile, web first</td><td>Web ships first (about 3 weeks). Mobile follows (about 1–1.5 weeks) and talks to the same live API.</td></tr>
+      <tr><td>No bank connections</td><td>Delete the fake "Connect Bank" and Plaid code. Invest instead in manual entry: a fast "add transaction", and CSV import with presets for CIBC, TD, RBC, Amex and Rogers files, duplicate skipping and undo.</td></tr>
+      <tr><td>You enter pay manually</td><td>A Settings screen for income (amount, how often, next pay date, which account). The forecast reads it; nothing is guessed or hard-coded.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">Where to host</span>
+  <h2>My recommendation: Vercel for the web app, Supabase for the database</h2>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Vercel + Supabase</th><th>Cloud Run + Supabase (or Cloud SQL)</th></tr></thead>
+    <tbody>
+      <tr><td>Setup effort</td><td><span class="pick">Lowest.</span> Connect the git repo, set environment variables, done. Preview links for every change.</td><td>More. Uses the Docker image; you manage the project, secrets, domain mapping and deploy command.</td></tr>
+      <tr><td>Cost for one user</td><td>Free tier is enough (the Hobby plan is for non-commercial use, which fits personal use).</td><td>Usually a few dollars or less; scales to zero.</td></tr>
+      <tr><td>Cold starts</td><td>Short.</td><td>A few seconds after idle unless you keep one instance warm (small cost).</td></tr>
+      <tr><td>Scheduled jobs (reminders, backups)</td><td>Vercel Cron.</td><td>Cloud Scheduler.</td></tr>
+      <tr><td>Best if…</td><td>You want the fastest, least-maintenance launch. <span class="pick">Pick this.</span></td><td>You already use Google Cloud, want full control, or expect heavy server work later.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="card alert">
+    <h3>Watch-outs for either choice</h3>
+    <p>Supabase's free tier <b>pauses a project after about a week with no activity</b>, which would make the app fail until you un-pause it. Use the paid tier, or a small scheduled ping. Also choose regions near you (for example Supabase Canada Central, or Cloud Run Montréal/Toronto) and make sure the database enforces SSL.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">The architecture change</span>
+  <h2>From a file on one machine to a database any number of copies can share</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Now</h3>
+      <div class="flow"><span class="node">Browser / phone</span><span class="arrow">→</span><span class="node">Next.js (one copy)</span><span class="arrow">→</span><span class="node">JSON file + memory</span></div>
+      <p class="muted">Breaks as soon as the host restarts or runs a second copy. Postgres only receives part of the data.</p>
+    </div>
+    <div class="card">
+      <h3>Target</h3>
+      <div class="flow"><span class="node">Browser / phone</span><span class="arrow">→</span><span class="node">Next.js (any number of copies)</span><span class="arrow">→</span><span class="node">Postgres (pooled)</span></div>
+      <p class="muted">Every read and write goes to Postgres. No state is kept in memory or on disk. Backups come from the database.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">The plan, in order</span>
+  <h2>Seven phases</h2>
+  <p class="muted">Phases 0 to 4 are the web launch. IDs in brackets (S1, D1…) refer to the anomaly register in <code>production-plan.html</code>. The prompts for each phase are in <code>AI_PROMPTS.md</code>.</p>
+  <div class="road">
+
+    <div class="ph block"><div class="hd"><h3><b>P0</b>Close the security holes <span class="tag">blocks launch</span></h3><span>1 day</span></div><ul>
+      <li><b>Upgrade Next.js</b> to the latest 15.5.x (15.5.16 or newer) to fix the login bypass and the critical advisories (S1, S2)</li>
+      <li><b>Check the login inside every API route</b>, not just in the middleware, and add a test that fails if a new route forgets to (S4)</li>
+      <li><b>Remove</b> the unused <code>ai</code> and <code>@google/genai</code> packages (S3)</li>
+      <li><b>Require a 12+ character passcode</b> in production; <b>you</b> choose a new one and store it in the host's secret settings (S5)</li>
+    </ul><div class="dw"><b>Done when:</b> the bypass header returns 401 for API and pages, every route is covered by the login test, and the audit shows no critical or high issues in the web app.</div></div>
+
+    <div class="ph block"><div class="hd"><h3><b>P1</b>Move everything to Postgres <span class="tag">blocks launch</span></h3><span>4–6 days</span></div><ul>
+      <li><b>Extend the schema</b> with what the app already uses but the database lacks: opening balance, APR, due date, minimum payment, notes, reviewed flag, exclude-from-reports flag, soft delete (the trash), pay/income settings, login-attempt records, and <code>owner_id</code> everywhere (B6)</li>
+      <li><b>Real migrations</b> (<code>prisma migrate</code>), not <code>db push</code></li>
+      <li><b>Rewrite the data layer on Prisma</b> with the same method names and results, so the web and mobile code keep working; keep the 29 existing data tests as the specification</li>
+      <li><b>One-time import</b> of your current ledger with a report proving 4,159 rows and all 13 balances match</li>
+      <li><b>Remove</b> the JSON store, in-memory trash and in-memory login limiter (B7, S7)</li>
+      <li><b>Serverless settings:</b> pooled connection for the app, direct connection for migrations, one Prisma client per instance, correct binary targets</li>
+      <li><b>Test database</b> in Docker for local runs and CI</li>
+    </ul><div class="dw"><b>Done when:</b> all tests pass against Postgres, the import reproduces today's numbers exactly, and two copies of the app running at once see each other's changes.</div></div>
+
+    <div class="ph block"><div class="hd"><h3><b>P2</b>Make the numbers trustworthy <span class="tag">blocks launch</span></h3><span>3–4 days</span></div><ul>
+      <li><b>Transfers:</b> pair internal transfers and leave them out of totals; treat e-transfers in or out as income or spending (D1)</li>
+      <li><b>Data-health screen</b> with one-click fixes: type vs sign, duplicates, zero amounts, unpaired transfers, stale accounts, opening-balance gaps (D2, D3, D6, D8)</li>
+      <li><b>Exclude-from-reports flag</b> replaces the "Adjustments not to consider" category and is honoured everywhere (D4)</li>
+      <li><b>Reviewed flag</b> and bulk "Mark reviewed" so the queue can reach zero (D5)</li>
+      <li><b>Sorting by amount</b> uses size, not sign (B3)</li>
+      <li><b>You enter</b> each card's APR and due date; resolve the $116.40 CIBC gap (D6, D7)</li>
+    </ul><div class="dw"><b>Done when:</b> the transfer net is near zero, the review queue is under 50 and clearable, and one full month's totals match your statements.</div></div>
+
+    <div class="ph"><div class="hd"><h3><b>P3</b>Manual-first product</h3><span>3 days</span></div><ul>
+      <li><b>Delete</b> the Plaid simulation, its store entries and both "Connect Bank" buttons (B2)</li>
+      <li><b>Income settings:</b> sources with amount, frequency (weekly, every two weeks, twice a month, monthly), next pay date and deposit account; one-off expected income and bills; the forecast uses these plus your real average spending, and your own date and timezone (B1)</li>
+      <li><b>Better CSV import:</b> presets for CIBC, TD, RBC, Amex and Rogers files, column mapping with a preview, skip duplicates, undo a whole import</li>
+      <li><b>Remove hard-coded claims:</b> transaction counts, "Active" reminders, the Supabase guide; keep redirects' query strings; self-host fonts (B4, B5, S8)</li>
+      <li><b>Make the seed script opt-in</b> and free of personal sample data (B8)</li>
+    </ul><div class="dw"><b>Done when:</b> searching the source for "simulate", "Plaid", "4,159" and "751.30" finds nothing that reaches users, and changing your pay in Settings changes the forecast.</div></div>
+
+    <div class="ph block"><div class="hd"><h3><b>P4</b>Deploy, protect and watch <span class="tag">web launch</span></h3><span>3 days</span></div><ul>
+      <li><b>Two environments</b> (staging and production), each with its own database and secrets; never share data</li>
+      <li><b>Deploy</b> to Vercel (or Cloud Run) with your domain and HTTPS; secure cookies on</li>
+      <li><b>CI</b> on every push: install, type-check, tests against Postgres, build, dependency audit</li>
+      <li><b>Browser smoke tests</b> (Playwright): login, date filter, export, report, bulk type change, delete and undo</li>
+      <li><b>Backups:</b> daily database backups with a tested restore, kept 30 days (O2)</li>
+      <li><b>Monitoring:</b> error tracking, an uptime check on <code>/api/health</code>, alerts for repeated login failures</li>
+      <li><b>Runbook</b> (<code>docs/RUNBOOK.md</code>): deploy, roll back, restore, rotate secrets</li>
+      <li><b>Optional:</b> bill reminders by email from a scheduled job</li>
+    </ul><div class="dw"><b>Done when:</b> a push to main deploys to staging automatically, production is promoted by hand, a restored backup opens correctly, and a deliberate error appears in monitoring.</div></div>
+
+    <div class="ph"><div class="hd"><h3><b>P5</b>Mobile app <span class="tag">after web</span></h3><span>5–7 days</span></div><ul>
+      <li><b>Build setup:</b> icons, splash, <code>eas.json</code> with development, preview and production profiles, bundle IDs, versions, API address per profile (M1)</li>
+      <li><b>Run on a real phone</b> against staging and fix what breaks (M2)</li>
+      <li><b>Face ID / fingerprint lock</b> when the app opens or returns from the background (M3)</li>
+      <li><b>Catch up with web:</b> date range, filters, search across everything, add transaction, mark bill paid (M4)</li>
+      <li><b>Tests</b> for the sign-in, cache fallback and 401 handling; <b>distribute</b> through TestFlight and the Play internal track</li>
+    </ul><div class="dw"><b>Done when:</b> a preview build on your phone shows live data, locks with biometrics, and shows the offline banner when the network is off.</div></div>
+
+    <div class="ph later"><div class="hd"><h3><b>P6</b>Ready for more users <span class="tag">later</span></h3><span>5–8 days</span></div><ul>
+      <li><b>Real accounts</b> (Supabase Auth or Auth.js) replace the shared passcode; invite-only sign-up</li>
+      <li><b>Every query scoped by owner</b> in code, with database row-level security as a second lock</li>
+      <li><b>Sessions you can revoke</b>, "sign out everywhere", passkeys or one-time codes (S5, S6)</li>
+      <li><b>Per-user limits</b>, an audit log, "export my data" and "delete my account"</li>
+      <li><b>Load test</b> and add the database indexes the results call for</li>
+    </ul><div class="dw"><b>Done when:</b> a second test user can't see or change the first user's data by any route, including by guessing ids.</div></div>
+
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Timeline</span>
+  <div class="tbl"><table>
+    <thead><tr><th>When</th><th>What you have</th></tr></thead>
+    <tbody>
+      <tr><td>End of week 1</td><td>Secure login (P0) and the database move started (P1)</td></tr>
+      <tr><td>End of week 2</td><td>Everything on Postgres, numbers corrected, fake features gone (P1–P3)</td></tr>
+      <tr><td>End of week 3</td><td><b>Web live</b> on staging then production, with CI, backups and monitoring (P4)</td></tr>
+      <tr><td>Weeks 4–5</td><td>Mobile app on your phone and in testing channels (P5)</td></tr>
+      <tr><td>Later</td><td>Multi-user (P6), only when you need it</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">One developer, full-time. Your own tasks (changing the passcode, entering card APRs and due dates, reviewing duplicates, choosing the domain) add a few hours spread across the weeks.</p>
+</section>
+
+<section>
+  <span class="eyebrow">What changed from the first plan</span>
+  <div class="card"><ul style="margin:0;padding-left:18px;display:grid;gap:6px;font-size:14.5px">
+    <li>The database move went from an optional last phase to <b>P1, before launch</b>.</li>
+    <li>The "run exactly one instance" rule and the persistent-volume advice are <b>gone</b>; Postgres removes the need.</li>
+    <li>"Detect my pay from the ledger" became <b>a Settings screen you fill in</b>.</li>
+    <li>Plaid or real bank links are <b>out</b>; manual import and entry get the effort instead.</li>
+    <li><code>owner_id</code> on every table is <b>new</b>, so multi-user later is cheap.</li>
+    <li>The Docker image matters only if you choose Cloud Run.</li>
+  </ul></div>
+</section>
+
+<section>
+  <span class="eyebrow">Go-live checklist (web)</span>
+  <div class="check"><ul>
+    <li>Next.js upgraded; the bypass header returns 401; every route has its own login check</li>
+    <li>No critical or high advisories in what ships to production</li>
+    <li>New 12+ character passcode and a 32+ character <code>AUTH_SECRET</code> in the host's secret settings; nothing secret in git</li>
+    <li>All data in Postgres; no JSON file, memory store or disk write left in the app</li>
+    <li>Your ledger imported; row count and all 13 balances match; totals for one month match your statements</li>
+    <li>Transfers paired, review queue cleared, exclude flag in effect</li>
+    <li>Card APRs and due dates entered; income set in Settings; forecast reads it</li>
+    <li>No simulated bank connection or hard-coded numbers visible</li>
+    <li>Staging and production are separate (own database, own secrets)</li>
+    <li>HTTPS on your domain; secure cookies; security headers present</li>
+    <li>CI green on the release commit, including the browser smoke tests</li>
+    <li>Daily backup running; a restore rehearsal done</li>
+    <li>Error tracking and uptime alerts working</li>
+    <li>Runbook written; everything committed to a private repository</li>
+  </ul></div>
+</section>
+
+</div>
+</body>
+</html>

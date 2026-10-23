@@ -52,29 +52,7 @@ export function LatestActivityWidget() {
 
   // Group transactions by date
   const groups: DayGroup[] = React.useMemo(() => {
-    if (!rawTxs || rawTxs.length === 0) {
-      return [
-        {
-          dateLabel: 'Oct 16',
-          netLabel: '+$596.45',
-          isPositiveNet: true,
-          items: [
-            { id: '1', monogram: 'G', color: '#2F6BB3', merchant: 'Garda Canada', details: 'Payroll · CIBC Smart', amount: 751.30, isInflow: true },
-            { id: '2', monogram: 'T', color: '#B5577F', merchant: 'Tim Hortons', details: 'Dining · CIBC Dividend Visa', amount: -4.85 },
-            { id: '3', monogram: '⇄', color: '#5B7088', merchant: 'Transfer to card', details: 'Transfers · CIBC Smart', amount: -150.00 },
-          ],
-        },
-        {
-          dateLabel: 'Oct 15',
-          netLabel: '−$61.32',
-          isPositiveNet: false,
-          items: [
-            { id: '4', monogram: 'U', color: '#14968A', merchant: 'Uber', details: 'Rideshare · TD Chequing', amount: -5.82 },
-            { id: '5', monogram: '$', color: '#8C7B55', merchant: 'TD monthly fee', details: 'Bank fees · TD Chequing', amount: -5.00 },
-          ],
-        },
-      ];
-    }
+    if (!rawTxs || rawTxs.length === 0) return [];
 
     const map = new Map<string, any[]>();
     for (const tx of rawTxs) {
@@ -135,6 +113,9 @@ export function LatestActivityWidget() {
 
       {/* Ledger Rows */}
       <div className="flex flex-col">
+        {txData && groups.length === 0 && (
+          <p className="py-6 text-center text-xs text-[var(--muted-color)]">No transactions yet. Add one or import a CSV from Activity.</p>
+        )}
         {groups.map((group, gIdx) => (
           <div key={group.dateLabel || gIdx}>
             {/* Day Header Divider */}

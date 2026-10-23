@@ -6,52 +6,17 @@
 
 @layer base {
   :root {
-    /* FinanceOS 2.0 Redesign — Light */
-    --canvas: #F3F5F9;
-    --surface: #FFFFFF;
-    --raised: #F8FAFC;
-    --line: #DFE5EE;
-    --line-soft: #EAEFF5;
-    --ink: #0E1726;
-    --muted-color: #5A6B80;
-    --faint: #8A99AD;
-    --vault: #13294B;
-    --vault-ink: #E9F0FB;
-    --vault-muted: #9FB2CF;
-    --teal: #0E8A78;
-    --teal-soft: #E0F2EE;
-    --pos: #16835A;
-    --neg: #C23A2E;
-    --warn: #B8770A;
-    --pos-soft: #E2F2EA;
-    --neg-soft: #FBE8E5;
-    --warn-soft: #FBF0DA;
-
-    --background: 216 33% 97%;
-    --foreground: 216 50% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 216 50% 12%;
+    /* Palette and semantic colors come from @financeos/design-tokens (tailwind.config.ts). */
     --popover: 0 0% 100%;
-    --popover-foreground: 216 50% 12%;
     --primary: 215 61% 22%;       /* #13294B vault navy */
     --primary-foreground: 0 0% 100%;
     --secondary: 214 32% 94%;
-    --secondary-foreground: 215 17% 40%;
     --muted: 214 32% 94%;
-    --muted-foreground: 215 17% 40%;
-    --accent: 172 78% 27%;        /* #0E8A78 vault teal */
     --accent-foreground: 0 0% 100%;
-    --positive: 154 63% 31%;      /* #16835A */
     --positive-foreground: 0 0% 100%;
-    --negative: 4 63% 47%;        /* #C23A2E */
     --negative-foreground: 0 0% 100%;
-    --destructive: 4 63% 47%;
     --destructive-foreground: 0 0% 100%;
-    --warning: 37 94% 37%;        /* #B8770A */
     --warning-foreground: 0 0% 100%;
-    --border: 214 28% 89%;
-    --input: 214 28% 89%;
-    --ring: 172 78% 27%;
     --radius: 0.75rem;
 
     --chart-1: 215 61% 32%;
@@ -62,52 +27,17 @@
   }
 
   .dark, [data-theme="dark"] {
-    /* FinanceOS 2.0 Redesign — Dark */
-    --canvas: #070C15;
-    --surface: #0E1522;
-    --raised: #121B2B;
-    --line: #1F2B3F;
-    --line-soft: #172234;
-    --ink: #E7EEF8;
-    --muted-color: #8FA0B7;
-    --faint: #62738C;
-    --vault: #0A1424;
-    --vault-ink: #E7EEF8;
-    --vault-muted: #7F93B1;
-    --teal: #39C9B2;
-    --teal-soft: #0F2E2A;
-    --pos: #4CC38A;
-    --neg: #F2796C;
-    --warn: #E8AE45;
-    --pos-soft: #0F2A1E;
-    --neg-soft: #331614;
-    --warn-soft: #32250D;
-
-    --background: 218 43% 8%;     /* #070C15 */
-    --foreground: 215 47% 94%;    /* #E7EEF8 */
-    --card: 218 38% 11%;          /* #0E1522 */
-    --card-foreground: 215 47% 94%;
+    /* Dark palette also comes from @financeos/design-tokens. */
     --popover: 218 38% 13%;
-    --popover-foreground: 215 47% 94%;
     --primary: 217 60% 76%;
     --primary-foreground: 218 43% 8%;
     --secondary: 218 36% 17%;
-    --secondary-foreground: 215 22% 66%;
     --muted: 218 36% 15%;
-    --muted-foreground: 215 22% 66%;
-    --accent: 170 55% 50%;        /* #39C9B2 */
     --accent-foreground: 218 43% 8%;
-    --positive: 151 50% 53%;      /* #4CC38A */
     --positive-foreground: 218 43% 8%;
-    --negative: 5 82% 68%;        /* #F2796C */
     --negative-foreground: 218 43% 8%;
-    --destructive: 5 82% 68%;
     --destructive-foreground: 218 43% 8%;
-    --warning: 38 77% 56%;        /* #E8AE45 */
     --warning-foreground: 218 43% 8%;
-    --border: 218 37% 21%;        /* #1F2B3F */
-    --input: 218 37% 21%;
-    --ring: 170 55% 50%;
 
     --chart-1: 217 60% 76%;
     --chart-2: 170 55% 50%;
@@ -247,4 +177,13 @@
   main {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   }
+}
+
+/* Printable report (/report): clean pages when saved as PDF or printed */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  html, body { background: #ffffff !important; }
+  .no-print { display: none !important; }
+  .report-sheet thead { display: table-header-group; }
+  .report-sheet tr { break-inside: avoid; }
 }

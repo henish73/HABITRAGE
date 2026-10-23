@@ -92,3 +92,44 @@ export const transactionFilterSchema = z.object({
     .default('date'),
   sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
 });
+
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
+
+/**
+ * Fields an account can change after it's created. The balance isn't one of them: it is
+ * always calculated from the transactions (plus the opening balance), so editing it
+ * directly would be overwritten the next time a transaction changes.
+ */
+export const updateAccountSchema = z
+  .object({
+    bank_name: z.string().trim().min(1, 'Bank name is required').max(100),
+    account_name: z.string().trim().min(1, 'Account name is required').max(120),
+    account_number: z.string().trim().min(1, 'Account number is required').max(40),
+    account_type: z.string().trim().min(1, 'Account type is required').max(60),
+    credit_limit: z.number().min(0).max(10_000_000).nullable(),
+    apr: z.number().min(0).max(1, 'APR is a decimal, e.g. 0.1999 for 19.99%').nullable(),
+    due_date: isoDay.nullable(),
+    minimum_payment: z.number().min(0).max(1_000_000).nullable(),
+    statement_closing_date: isoDay.nullable(),
+    notes: z.string().max(2000).nullable(),
+  })
+  .partial()
+  .strict();
+
+export const CREDIT_BUREAUS = ['Equifax', 'TransUnion', 'Borrowell'] as const;
+
+/** A credit report must carry a real score. Nothing is filled in on the user's behalf. */
+export const createCreditReportSchema = z.object({
+  bureau: z.enum(CREDIT_BUREAUS),
+  file_url: z.string().max(2000).default(''),
+  file_name: z.string().trim().min(1).max(200).default('Credit report'),
+  score: z.number().int('Score must be a whole number').min(300, 'Score must be 300–900').max(900, 'Score must be 300–900'),
+  utilization_percent: z.number().min(0).max(100).default(0),
+  total_debt: z.number().min(0).max(100_000_000).default(0),
+  open_accounts: z.array(z.any()).max(500).default([]),
+  closed_accounts: z.array(z.any()).max(500).default([]),
+  inquiries: z.array(z.any()).max(500).default([]),
+  derogatories: z.array(z.any()).max(500).default([]),
+  extracted_text: z.string().max(200_000).nullish(),
+  extracted_json: z.any().nullish(),
+});

@@ -191,3 +191,115 @@ test('deleting a category reassigns its transactions', async () => {
   assert.equal(res.affectedCount, 1);
   assert.equal((await db.getTransactionById(tx.id))!.category, 'Groceries');
 });
+
+// ---------- trash & restore ----------
+test('deleted transactions go to the trash and restore exactly, balances included', async () => {
+  const before = (await db.getAccountById(bankId))!.balance;
+  const tx = await db.createTransaction({
+    account_id: bankId, date: '2026-10-19', description: 'Trash me', merchant: 'Trash',
+    category: 'Groceries', amount: -12.34, status: 'posted',
+  });
+  assert.equal(await db.deleteTransaction(tx.id), true);
+  assert.equal(await db.getTransactionById(tx.id), null);
+  assert.ok((await db.getTrash()).some((t) => t.transaction.id === tx.id));
+
+  const restored = await db.restoreTransactions([tx.id]);
+  assert.equal(restored.length, 1);
+  const back = await db.getTransactionById(tx.id);
+  assert.equal(back?.category, 'Groceries');
+  assert.equal(back?.amount, -12.34);
+  assert.equal(Number(((await db.getAccountById(bankId))!.balance - before).toFixed(2)), -12.34);
+  assert.ok(!(await db.getTrash()).some((t) => t.transaction.id === tx.id), 'restored item left the trash');
+});
+
+test('bulk deletes are restorable too', async () => {
+  const a = await db.createTransaction({ account_id: bankId, date: '2026-10-19', description: 'Bulk A', merchant: 'A', category: 'General', amount: -1, status: 'posted' });
+  const b = await db.createTransaction({ account_id: cardId, date: '2026-10-19', description: 'Bulk B', merchant: 'B', category: 'General', amount: -2, status: 'posted' });
+  assert.equal(await db.bulkDeleteTransactions([a.id, b.id]), 2);
+  assert.equal((await db.restoreTransactions([a.id, b.id])).length, 2);
+});
+
+test('restoring something not in the trash does nothing', async () => {
+  assert.deepEqual(await db.restoreTransactions(['not-a-real-id']), []);
+});
+
+// ---------- review queue ----------
+test('needs_review filter returns only review items', async () => {
+  const r = await db.getTransactions({ needs_review: true, limit: 5000 });
+  assert.ok(r.total > 0);
+  assert.ok(r.total < (await db.getTransactions({ limit: 1 })).total);
+});
+
+// ---------- bulk type / status, date ranges, totals ----------
+test('bulk type Inflow makes negative amounts positive and updates the balance', async () => {
+  const before = (await db.getAccountById(bankId))!.balance;
+  const tx = await db.createTransaction({ account_id: bankId, date: '2026-10-18', description: 'Flip me', merchant: 'Flip', category: 'General', amount: -40, status: 'posted' });
+  const afterCharge = (await db.getAccountById(bankId))!.balance;
+  assert.equal(Number((before - afterCharge).toFixed(2)), 40);
+
+  await db.bulkUpdateTransactions([tx.id], { type: 'Inflow' });
+  const flipped = await db.getTransactionById(tx.id);
+  assert.equal(flipped?.amount, 40);
+  assert.equal(flipped?.type, 'Inflow');
+  assert.equal(Number(((await db.getAccountById(bankId))!.balance - before).toFixed(2)), 40);
+});
+
+test('bulk type Transfers relabels without changing the amount or balance', async () => {
+  const tx = await db.createTransaction({ account_id: bankId, date: '2026-10-18', description: 'Move', merchant: 'Move', category: 'General', amount: -15, status: 'posted' });
+  const balance = (await db.getAccountById(bankId))!.balance;
+  await db.bulkUpdateTransactions([tx.id], { type: 'Transfers' });
+  assert.equal((await db.getTransactionById(tx.id))?.amount, -15);
+  assert.equal((await db.getAccountById(bankId))!.balance, balance);
+});
+
+test('bulk status pending takes the amount out of the posted balance, posted puts it back', async () => {
+  const tx = await db.createTransaction({ account_id: bankId, date: '2026-10-18', description: 'Hold', merchant: 'Hold', category: 'General', amount: -25, status: 'posted' });
+  const posted = (await db.getAccountById(bankId))!.balance;
+  await db.bulkUpdateTransactions([tx.id], { status: 'pending' });
+  assert.equal(Number(((await db.getAccountById(bankId))!.balance - posted).toFixed(2)), 25);
+  await db.bulkUpdateTransactions([tx.id], { status: 'posted' });
+  assert.equal((await db.getAccountById(bankId))!.balance, posted);
+});
+
+test('date range includes both end dates and nothing outside', async () => {
+  await db.createTransaction({ account_id: bankId, date: '2031-03-01', description: 'edge-a', merchant: 'edge', category: 'General', amount: -1, status: 'posted' });
+  await db.createTransaction({ account_id: bankId, date: '2031-03-05', description: 'edge-b', merchant: 'edge', category: 'General', amount: -2, status: 'posted' });
+  await db.createTransaction({ account_id: bankId, date: '2031-03-06', description: 'edge-c', merchant: 'edge', category: 'General', amount: -4, status: 'posted' });
+  const r = await db.getTransactions({ date_from: '2031-03-01', date_to: '2031-03-05', limit: 100 });
+  assert.equal(r.total, 2);
+  assert.deepEqual(r.transactions.map((t) => t.date).sort(), ['2031-03-01', '2031-03-05']);
+});
+
+test('inflow, outflow and net add up for any filtered set', async () => {
+  await db.createTransaction({ account_id: bankId, date: '2032-01-10', description: 'pay', merchant: 'pay', category: 'Income / Payroll', amount: 500, status: 'posted' });
+  await db.createTransaction({ account_id: bankId, date: '2032-01-11', description: 'buy', merchant: 'buy', category: 'Groceries', amount: -120.5, status: 'posted' });
+  const r = await db.getTransactions({ date_from: '2032-01-01', date_to: '2032-01-31', limit: 100 });
+  assert.equal(r.totalInflow, 500);
+  assert.equal(r.totalOutflow, 120.5);
+  assert.equal(r.netCashFlow, 379.5);
+  assert.equal(Number((r.totalInflow! - r.totalOutflow!).toFixed(2)), r.netCashFlow);
+});
+
+test('amount range filters by size, not sign', async () => {
+  const r = await db.getTransactions({ date_from: '2032-01-01', date_to: '2032-01-31', amount_min: 100, amount_max: 200, limit: 100 });
+  assert.equal(r.total, 1);
+  assert.equal(r.transactions[0].amount, -120.5);
+});
+
+// ---------- new accounts ----------
+test('a new account keeps its starting balance as transactions are added', async () => {
+  const acc = await db.createAccount({
+    type: 'bank', bank_name: 'Test', account_name: 'Starter', account_number: '****1111',
+    account_type: 'Chequing', balance: 500,
+  });
+  assert.equal(acc.opening_balance, 500);
+  await db.createTransaction({ account_id: acc.id, date: '2026-10-10', description: 'Coffee', merchant: 'Cafe', category: 'General', amount: -20, status: 'posted' });
+  assert.equal((await db.getAccountById(acc.id))!.balance, 480);
+
+  const card = await db.createAccount({
+    type: 'credit_card', bank_name: 'Test', account_name: 'Starter Card', account_number: '****2222',
+    account_type: 'Credit Card', balance: 300, credit_limit: 1000,
+  });
+  await db.createTransaction({ account_id: card.id, date: '2026-10-10', description: 'Shop', merchant: 'Shop', category: 'General', amount: -50, status: 'posted' });
+  assert.equal((await db.getAccountById(card.id))!.balance, 350); // charges add to what you owe
+});

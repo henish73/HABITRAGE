@@ -30,64 +30,27 @@ export function CardWalletWidget() {
 
   const rawCards = (accountsData?.accounts || []).filter((a: any) => a.type === 'credit_card');
 
-  const cards: CardItem[] = rawCards.length > 0 ? rawCards.slice(0, 4).map((c: any) => {
-    const isAmexEssential = c.account_name.toLowerCase().includes('essential');
-    const isTD = c.bank_name.toLowerCase().includes('td');
-    const isAmexGreen = c.account_name.toLowerCase().includes('green');
-    const isRog = c.bank_name.toLowerCase().includes('rogers');
-
-    const gradientClass = isAmexEssential ? 'amexE' : isTD ? 'td' : isAmexGreen ? 'amexG' : isRog ? 'rog' : 'cibc';
-    const limit = c.credit_limit || 1000;
-    const balance = c.balance || 0;
+  const allCards: CardItem[] = rawCards.map((c: any) => {
+    const name = (c.account_name || '').toLowerCase();
+    const bank = (c.bank_name || '').toLowerCase();
+    const gradientClass = name.includes('essential') ? 'amexE' : name.includes('green') ? 'amexG' : bank.includes('td') ? 'td' : bank.includes('rogers') ? 'rog' : bank.includes('cibc') ? 'cibc' : 'amexB';
+    const limit = Number(c.credit_limit) > 0 ? Number(c.credit_limit) : 0;
+    const balance = Number(c.balance) || 0;
     const utilization = limit > 0 ? Math.round((Math.max(0, balance) / limit) * 100) : 0;
-
     return {
       id: c.id,
-      name: c.account_name.replace('American Express', 'Amex').replace('Credit Card', ''),
+      name: c.account_name.replace('American Express', 'Amex').replace('Credit Card', '').trim(),
       gradientClass,
       balance,
       limit,
       utilization,
       warn: utilization >= 70,
     };
-  }) : [
-    {
-      id: '1',
-      name: 'Amex Essential',
-      gradientClass: 'amexE',
-      balance: 10145.23,
-      limit: 13500,
-      utilization: 75,
-      warn: true,
-    },
-    {
-      id: '2',
-      name: 'TD Low Rate Visa',
-      gradientClass: 'td',
-      balance: 709.86,
-      limit: 1000,
-      utilization: 71,
-      warn: true,
-    },
-    {
-      id: '3',
-      name: 'Amex Green',
-      gradientClass: 'amexG',
-      balance: 4595.92,
-      limit: 8500,
-      utilization: 54,
-    },
-    {
-      id: '4',
-      name: 'Rogers Mastercard',
-      gradientClass: 'rog',
-      balance: 75.71,
-      limit: 500,
-      utilization: 15,
-    },
-  ];
+  });
+  // Show the four cards closest to their limit; the header totals cover all of them.
+  const cards = [...allCards].sort((a, b) => b.utilization - a.utilization).slice(0, 4);
 
-  const totalLimit = cards.reduce((sum, c) => sum + c.limit, 0);
+  const totalLimit = allCards.reduce((sum, c) => sum + c.limit, 0);
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-vault min-w-0">
@@ -97,11 +60,14 @@ export function CardWalletWidget() {
           Card wallet
         </span>
         <span className="text-xs font-mono text-[var(--muted-color)]">
-          {cards.length} cards · {formatCAD(totalLimit)} limit
+          {allCards.length} card{allCards.length === 1 ? '' : 's'} · {formatCAD(totalLimit)} limit
         </span>
       </div>
 
       {/* Realistic 2x2 Card Grid */}
+      {accountsData && cards.length === 0 && (
+        <p className="py-6 text-center text-xs text-[var(--muted-color)]">No credit cards yet. Add one from Wallet.</p>
+      )}
       <div className="grid grid-cols-2 gap-3">
         {cards.map((card) => (
           <div

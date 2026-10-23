@@ -246,3 +246,23 @@ export function getNodeLabel(account?: { bank_name?: string; account_name?: stri
   return `${bank.slice(0, 4)} ${name.slice(0, 4)}`.trim();
 }
 
+
+/**
+ * Whether a transaction belongs in the "To review" queue: pending holds,
+ * uncategorised or catch-all categories, unexpected inflows (likely refunds
+ * or mis-signed rows) and explicit refunds/cash back.
+ */
+export function needsReview(tx: { status?: string; category?: string | null; description?: string | null; amount: number }): boolean {
+  const cat = (tx.category || '').toLowerCase().trim();
+  const desc = (tx.description || '').toLowerCase();
+  return (
+    tx.status === 'pending' ||
+    !cat ||
+    cat === 'general' ||
+    cat.includes('uncategorized') ||
+    cat.includes('misc') ||
+    (tx.amount > 0 && !cat.includes('income') && !cat.includes('transfer')) ||
+    desc.includes('refund') ||
+    desc.includes('cash back')
+  );
+}

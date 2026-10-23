@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
 import { categorizeMerchant } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -183,6 +184,6 @@ export async function POST(req: Request) {
       transactions: importedTransactions.slice(0, 10),
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from "react-native";
 import { formatCAD } from "@financeos/shared";
-import { SEED_ACCOUNTS_FALLBACK, fetchAccounts, MobileAccount } from "../../src/lib/api";
+import { fetchAccounts, MobileAccount } from "../../src/lib/api";
 import { Landmark, CreditCard, ShieldCheck } from "lucide-react-native";
 
 export default function MobileAccounts() {
-  const [accounts, setAccounts] = useState<MobileAccount[]>(SEED_ACCOUNTS_FALLBACK);
+  const [accounts, setAccounts] = useState<MobileAccount[]>([]);
 
   useEffect(() => {
     fetchAccounts().then((accs) => {

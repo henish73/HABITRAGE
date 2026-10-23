@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFinanceStore } from '@/lib/store';
 import { formatCAD, cn } from '@/lib/utils';
+import { getCardTerms, formatDueDate } from '@/lib/card-terms';
+import { AddAccountDialog } from '@/components/accounts/AddAccountDialog';
+import { UploadCreditReportDialog } from '@/components/accounts/UploadCreditReportDialog';
 import {
   CreditCard,
   Building2,
@@ -13,11 +16,19 @@ import {
   Sparkles,
   ChevronRight,
   TrendingUp,
+  Plus,
+  Upload,
+  Pencil,
 } from 'lucide-react';
 
 export default function WalletPage() {
   const { isMasked, openPlaidModal } = useFinanceStore();
 
+  const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+  const [isUploadReportOpen, setIsUploadReportOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<any | null>(null);
+
+  // 1. Fetch Accounts
   const { data: accountsData } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
@@ -26,126 +37,70 @@ export default function WalletPage() {
     },
   });
 
+  // 2. Fetch Credit Reports from API
+  const { data: reportsData } = useQuery({
+    queryKey: ['credit-reports'],
+    queryFn: async () => {
+      const res = await fetch('/api/credit-reports');
+      return res.json();
+    },
+  });
+
+  const reports: any[] = reportsData?.reports || [];
+  // Newest report first, whatever order the API returns.
+  const activeReport =
+    [...reports].sort((a, b) => String(b.uploaded_at || '').localeCompare(String(a.uploaded_at || '')))[0] ?? null;
+  const scoreBand = (score: number) =>
+    score >= 760 ? 'Excellent' : score >= 725 ? 'Very good' : score >= 660 ? 'Good' : score >= 560 ? 'Fair' : 'Poor';
+
   const rawAccounts: any[] = accountsData?.accounts || [];
-  const rawBankAccounts = rawAccounts.filter((a) => a.type === 'bank');
-  const rawCards = rawAccounts.filter((a) => a.type === 'credit_card');
 
-  const bankAccounts = rawBankAccounts.length > 0 ? rawBankAccounts.map((a) => ({
-    name: a.account_name,
-    bank: a.bank_name,
-    type: a.account_type || 'Chequing',
-    balance: a.balance || 0,
-    number: a.account_number || '****',
-  })) : [
-    { name: 'CIBC Smart Account', bank: 'CIBC', type: 'Chequing', balance: 2138.00, number: '****7339' },
-    { name: 'TD Every Day Chequing', bank: 'TD', type: 'Chequing', balance: 71.80, number: '****7089' },
-    { name: 'RBC Day to Day Banking Chequing', bank: 'RBC', type: 'Chequing', balance: 0.09, number: '****7173' },
-    { name: 'CIBC eAdvantage Savings', bank: 'CIBC', type: 'Savings', balance: 0.00, number: '****5832' },
-    { name: 'TD High Interest Savings', bank: 'TD', type: 'Savings', balance: 0.00, number: '****9086' },
-    { name: 'RBC High Interest eSavings', bank: 'RBC', type: 'Savings', balance: 0.00, number: '****7181' },
-    { name: 'RBC NOMI Find & Save', bank: 'RBC', type: 'Savings', balance: 0.00, number: '****9475' },
-  ];
+  const bankAccounts = rawAccounts
+    .filter((a) => a.type === 'bank')
+    .map((a) => ({
+      raw: a,
+      name: a.account_name,
+      bank: a.bank_name,
+      type: a.account_type || 'Chequing',
+      balance: Number(a.balance) || 0,
+      number: a.account_number || '****',
+    }));
 
-  const cards = rawCards.length > 0 ? rawCards.map((c) => {
-    const isAmexEssential = c.account_name.toLowerCase().includes('essential');
-    const isAmexGreen = c.account_name.toLowerCase().includes('green');
-    const isTD = c.bank_name.toLowerCase().includes('td');
-    const isRog = c.bank_name.toLowerCase().includes('rogers');
-    const isCIBC = c.bank_name.toLowerCase().includes('cibc');
-    const isSimplyCash = c.account_name.toLowerCase().includes('simplycash');
+  const gradientFor = (c: any) => {
+    const name = (c.account_name || '').toLowerCase();
+    const bank = (c.bank_name || '').toLowerCase();
+    if (name.includes('essential')) return 'amexE';
+    if (name.includes('green')) return 'amexG';
+    if (bank.includes('td')) return 'td';
+    if (bank.includes('rogers')) return 'rog';
+    if (bank.includes('cibc')) return 'cibc';
+    return 'amexB';
+  };
 
-    const gradientClass = isAmexEssential ? 'amexE' : isTD ? 'td' : isAmexGreen ? 'amexG' : isRog ? 'rog' : isCIBC ? 'cibc' : 'amexB';
-    const limit = c.credit_limit || 1000;
-    const balance = c.balance || 0;
-    const utilization = limit > 0 ? Math.round((Math.max(0, balance) / limit) * 100) : 0;
-    const apr = isAmexGreen ? 'N/A (Charge)' : isAmexEssential ? '12.99%' : isTD ? '11.99%' : isRog ? '19.99%' : '20.99%';
-    const dueDate = c.due_date ? `Due ${c.due_date.slice(5)}` : balance < 0 ? 'Credit Balance' : 'Nov 12';
+  const cards = rawAccounts
+    .filter((a) => a.type === 'credit_card')
+    .map((c) => {
+      const terms = getCardTerms(c);
+      const limit = Number(c.credit_limit) > 0 ? Number(c.credit_limit) : 0;
+      const balance = Number(c.balance) || 0;
+      return {
+        raw: c,
+        id: c.id,
+        name: c.account_name,
+        shortName: c.account_name.replace('American Express', 'Amex'),
+        gradientClass: gradientFor(c),
+        balance,
+        limit,
+        utilization: limit > 0 ? Math.round((Math.max(0, balance) / limit) * 100) : 0,
+        apr: terms.aprLabel,
+        dueDate: balance < 0 ? 'Credit balance' : formatDueDate(c.due_date),
+      };
+    });
 
-    return {
-      id: c.id,
-      name: c.account_name,
-      shortName: c.account_name.replace('American Express', 'Amex'),
-      gradientClass,
-      balance,
-      limit,
-      utilization,
-      apr,
-      dueDate,
-    };
-  }) : [
-    {
-      id: 'amex-essential',
-      name: 'American Express Essential Credit Card',
-      shortName: 'Amex Essential',
-      gradientClass: 'amexE',
-      balance: 10145.23,
-      limit: 13500,
-      utilization: 75,
-      apr: '12.99%',
-      dueDate: 'Nov 5',
-    },
-    {
-      id: 'td-low-rate',
-      name: 'TD Low Rate Visa',
-      shortName: 'TD Low Rate Visa',
-      gradientClass: 'td',
-      balance: 709.86,
-      limit: 1000,
-      utilization: 71,
-      apr: '11.99%',
-      dueDate: 'Nov 18',
-    },
-    {
-      id: 'amex-green',
-      name: 'American Express Green Card',
-      shortName: 'Amex Green',
-      gradientClass: 'amexG',
-      balance: 4595.92,
-      limit: 8500,
-      utilization: 54,
-      apr: 'N/A (Charge)',
-      dueDate: 'Oct 28',
-    },
-    {
-      id: 'rogers-mc',
-      name: 'Rogers Mastercard',
-      shortName: 'Rogers Mastercard',
-      gradientClass: 'rog',
-      balance: 75.71,
-      limit: 500,
-      utilization: 15,
-      apr: '19.99%',
-      dueDate: 'Nov 22',
-    },
-    {
-      id: 'cibc-dividend',
-      name: 'CIBC Dividend Visa',
-      shortName: 'CIBC Dividend Visa',
-      gradientClass: 'cibc',
-      balance: 31.44,
-      limit: 3500,
-      utilization: 1,
-      apr: '20.99%',
-      dueDate: 'Oct 21',
-    },
-    {
-      id: 'amex-simplycash',
-      name: 'American Express SimplyCash Card',
-      shortName: 'Amex SimplyCash',
-      gradientClass: 'amexB',
-      balance: -369.88,
-      limit: 1100,
-      utilization: 0,
-      apr: '20.99%',
-      dueDate: 'Credit Balance',
-    },
-  ];
-
-
-  const totalBankCash = bankAccounts.reduce((sum, a) => sum + Math.max(0, a.balance), 0);
+  const totalBankCash = bankAccounts.reduce((sum, a) => sum + a.balance, 0);
   const totalCardDebt = cards.reduce((sum, c) => sum + (c.balance > 0 ? c.balance : 0), 0);
   const totalCreditLimit = cards.reduce((sum, c) => sum + c.limit, 0);
-  const aggregateUtilization = Math.round((totalCardDebt / totalCreditLimit) * 100);
+  const aggregateUtilization = totalCreditLimit > 0 ? Math.round((totalCardDebt / totalCreditLimit) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-200">
@@ -160,72 +115,109 @@ export default function WalletPage() {
           </p>
         </div>
 
-        <button
-          onClick={openPlaidModal}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--raised)] text-xs font-semibold text-[var(--ink)] transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
-        >
-          <Building2 className="w-3.5 h-3.5 text-[var(--teal)]" />
-          <span>Connect Bank</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => {
+              setEditingAccount(null);
+              setIsAddAccountOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--raised)] text-xs font-semibold text-[var(--ink)] transition-colors shadow-xs cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-[var(--teal)]" />
+            <span>Add Account</span>
+          </button>
+
+          <button
+            onClick={() => setIsUploadReportOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--raised)] text-xs font-semibold text-[var(--ink)] transition-colors shadow-xs cursor-pointer"
+          >
+            <Upload className="w-3.5 h-3.5 text-[var(--teal)]" />
+            <span>Upload Credit Report</span>
+          </button>
+
+          <button
+            onClick={openPlaidModal}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--ink)] text-[var(--surface)] hover:opacity-90 text-xs font-semibold transition-opacity shadow-xs cursor-pointer"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Connect Bank</span>
+          </button>
+        </div>
       </div>
 
       {/* Credit Score & Utilization Headline Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-        {/* Credit Score (TransUnion 724) */}
-        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 sm:p-6 shadow-vault flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-color)]">
-              Credit Score · TransUnion
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--pos-soft)] text-[var(--pos)]">
-              Good · 724
-            </span>
-          </div>
+        {/* Credit Score: only from an uploaded report */}
+        {activeReport ? (
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 sm:p-6 shadow-vault flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-color)]">
+                Credit score · {activeReport.bureau}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--pos-soft)] text-[var(--pos)]">
+                {scoreBand(activeReport.score)} · {activeReport.score}
+              </span>
+            </div>
 
-          <div className="flex items-center gap-5 my-3">
-            <div className="relative w-16 h-16 shrink-0">
-              <svg className="w-16 h-16 -rotate-90" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="23" fill="none" stroke="var(--line)" strokeWidth="5" />
-                <circle
-                  cx="28"
-                  cy="28"
-                  r="23"
-                  fill="none"
-                  stroke="var(--pos)"
-                  strokeWidth="5"
-                  strokeDasharray="145"
-                  strokeDashoffset={145 - (145 * 724) / 900}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center font-mono font-bold text-sm text-[var(--ink)]">
-                724
+            <div className="flex items-center gap-5 my-3">
+              <div className="relative w-16 h-16 shrink-0">
+                <svg className="w-16 h-16 -rotate-90" viewBox="0 0 56 56" aria-hidden="true">
+                  <circle cx="28" cy="28" r="23" fill="none" stroke="var(--line)" strokeWidth="5" />
+                  <circle
+                    cx="28"
+                    cy="28"
+                    r="23"
+                    fill="none"
+                    stroke="var(--pos)"
+                    strokeWidth="5"
+                    strokeDasharray="145"
+                    strokeDashoffset={145 - (145 * Math.max(0, activeReport.score - 300)) / 600}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center font-mono font-bold text-sm text-[var(--ink)]">
+                  {activeReport.score}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-[var(--ink)]">From {activeReport.file_name || 'your uploaded report'}</div>
+                <p className="text-[11.5px] text-[var(--muted-color)] leading-snug">
+                  Uploaded {activeReport.uploaded_at ? new Date(activeReport.uploaded_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : 'recently'}. Upload a newer report to update it.
+                </p>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-[var(--ink)]">Prime Credit Tier</div>
-              <p className="text-[11.5px] text-[var(--muted-color)] leading-snug">
-                Your score is eligible for best Canadian bank rates. Keep utilization under 30% to reach 750+.
-              </p>
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[var(--line-soft)] text-[11px]">
+              <div>
+                <span className="text-[var(--muted-color)] block">Reported debt</span>
+                <b className={cn('text-[var(--ink)]', isMasked && 'blurnum')}>{formatCAD(activeReport.total_debt || 0)}</b>
+              </div>
+              <div>
+                <span className="text-[var(--muted-color)] block">Inquiries</span>
+                <b className="text-[var(--ink)]">{Array.isArray(activeReport.inquiries) ? activeReport.inquiries.length : 0}</b>
+              </div>
+              <div>
+                <span className="text-[var(--muted-color)] block">Derogatory marks</span>
+                <b className="text-[var(--ink)]">{Array.isArray(activeReport.derogatories) ? activeReport.derogatories.length : 0}</b>
+              </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[var(--line-soft)] text-[11px]">
-            <div>
-              <span className="text-[var(--muted-color)] block">Payment History</span>
-              <b className="text-[var(--pos)]">99% Exceptional</b>
-            </div>
-            <div>
-              <span className="text-[var(--muted-color)] block">Overall Utilization</span>
-              <b className="text-[var(--warn)]">{aggregateUtilization}% High</b>
-            </div>
-            <div>
-              <span className="text-[var(--muted-color)] block">Hard Inquiries</span>
-              <b className="text-[var(--ink)]">2 Low</b>
-            </div>
+        ) : (
+          <div className="bg-[var(--surface)] border border-dashed border-[var(--line)] rounded-2xl p-5 sm:p-6 flex flex-col items-start justify-center gap-2">
+            <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-color)]">Credit score</span>
+            <b className="text-sm text-[var(--ink)]">No credit report yet</b>
+            <p className="text-xs text-[var(--muted-color)] max-w-sm">
+              Upload your latest Equifax or TransUnion report to see your score, inquiries and reported debt here.
+            </p>
+            <button
+              onClick={() => setIsUploadReportOpen(true)}
+              className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--ink)] text-[var(--surface)] text-xs font-semibold cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload credit report</span>
+            </button>
           </div>
-        </div>
+        )}
 
         {/* Aggregate Revolving Debt Summary */}
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 sm:p-6 shadow-vault flex flex-col justify-between">
@@ -243,7 +235,7 @@ export default function WalletPage() {
               {formatCAD(totalCardDebt)}
             </div>
             <div className="text-xs text-[var(--muted-color)] mt-0.5">
-              Across 6 cards · Total available limit: {formatCAD(totalCreditLimit)}
+              Across {cards.length} cards · Total available limit: {formatCAD(totalCreditLimit)}
             </div>
           </div>
 
@@ -252,7 +244,7 @@ export default function WalletPage() {
             <div className="w-full h-2 rounded-full bg-[var(--raised)] border border-[var(--line-soft)] overflow-hidden">
               <div
                 className="h-full rounded-full bg-[var(--warn)] transition-all duration-500"
-                style={{ width: `${aggregateUtilization}%` }}
+                style={{ width: `${Math.min(aggregateUtilization, 100)}%` }}
               />
             </div>
             <div className="flex justify-between text-[11px] font-mono text-[var(--muted-color)] mt-1.5">
@@ -264,7 +256,7 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* Credit Cards Grid (The Wallet) */}
+      {/* Credit Cards Grid */}
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 sm:p-6 shadow-vault">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -272,10 +264,10 @@ export default function WalletPage() {
               Credit Cards &amp; Limits
             </h2>
             <p className="text-xs text-[var(--muted-color)]">
-              Cards with utilization &gt; 30% flag a score warning
+              Revolving credit lines and statement due dates
             </p>
           </div>
-          <span className="text-xs font-mono text-[var(--muted-color)]">6 Active Accounts</span>
+          <span className="text-xs font-mono text-[var(--muted-color)]">{cards.length} Active Cards</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -287,7 +279,7 @@ export default function WalletPage() {
             return (
               <div
                 key={c.id}
-                className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 flex flex-col justify-between gap-3 shadow-xs hover:border-[var(--teal)] transition-all"
+                className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 flex flex-col justify-between gap-3 shadow-xs hover:border-[var(--teal)] transition-all relative group"
               >
                 {/* Visual Card Replica */}
                 <div className={cn("ccard h-28", c.gradientClass)}>
@@ -302,7 +294,7 @@ export default function WalletPage() {
                       {c.balance < 0 ? `Credit −${formatCAD(Math.abs(c.balance))}` : formatCAD(c.balance)}
                     </div>
                     <div className="text-[10.5px] text-white/80 font-mono">
-                      Limit {formatCAD(c.limit)} · Due {c.dueDate}
+                      {c.limit > 0 ? `Limit ${formatCAD(c.limit)}` : 'No limit set'} · {c.dueDate}
                     </div>
                   </div>
                 </div>
@@ -335,13 +327,26 @@ export default function WalletPage() {
                       </div>
                       <div className="text-[11px] text-[var(--muted-color)]">
                         {isOver70
-                          ? 'Hurts credit score (high)'
+                          ? 'Hurts score (>70%)'
                           : isOver30
-                          ? 'Above 30% benchmark'
+                          ? 'Above 30% target'
                           : 'Optimal ratio (<30%)'}
                       </div>
                     </div>
                   </div>
+
+                  {c.raw && (
+                    <button
+                      onClick={() => {
+                        setEditingAccount(c.raw);
+                        setIsAddAccountOpen(true);
+                      }}
+                      title="Edit Account Details"
+                      className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--raised)] text-[var(--muted-color)] hover:text-[var(--ink)] transition-colors cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -360,7 +365,7 @@ export default function WalletPage() {
               Chequing and high-interest savings accounts
             </p>
           </div>
-          <span className="text-xs font-mono text-[var(--muted-color)]">7 Bank Accounts</span>
+          <span className="text-xs font-mono text-[var(--muted-color)]">{bankAccounts.length} Bank Accounts</span>
         </div>
 
         <div className="divide-y divide-[var(--line-soft)]">
@@ -380,19 +385,43 @@ export default function WalletPage() {
                 </div>
               </div>
 
-              <div className="text-right">
-                <span className={cn(
-                  "font-mono font-semibold text-xs sm:text-sm text-[var(--ink)]",
-                  isMasked && "blurnum"
-                )}>
+              <div className="flex items-center gap-3">
+                <span className={cn("font-mono font-semibold text-xs sm:text-sm text-[var(--ink)]", isMasked && "blurnum")}>
                   {formatCAD(b.balance)}
                 </span>
-                <span className="block text-[10px] text-[var(--pos)]">Available</span>
+                {b.raw && (
+                  <button
+                    onClick={() => {
+                      setEditingAccount(b.raw);
+                      setIsAddAccountOpen(true);
+                    }}
+                    title="Edit Account Details"
+                    className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--raised)] text-[var(--muted-color)] hover:text-[var(--ink)] transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Add / Edit Account Dialog */}
+      <AddAccountDialog
+        isOpen={isAddAccountOpen}
+        onClose={() => {
+          setIsAddAccountOpen(false);
+          setEditingAccount(null);
+        }}
+        editingAccount={editingAccount}
+      />
+
+      {/* Upload Credit Report Dialog */}
+      <UploadCreditReportDialog
+        isOpen={isUploadReportOpen}
+        onClose={() => setIsUploadReportOpen(false)}
+      />
     </div>
   );
 }

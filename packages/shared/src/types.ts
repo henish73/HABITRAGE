@@ -12,6 +12,7 @@ export interface Account {
   balance: number;
   opening_balance?: number | null; // balance before the first ledger row (debt for cards)
   credit_limit?: number | null;
+  apr?: number | null; // decimal, e.g. 0.1999; blank means use the product estimate
   statement_start_date?: string | null;
   statement_closing_date?: string | null;
   due_date?: string | null;
@@ -137,6 +138,7 @@ export interface TransactionFilterParams {
   types?: string[];
   status?: TransactionStatus | 'all';
   source_file?: string;
+  needs_review?: boolean;
   page?: number;
   limit?: number;
   sort_by?: TransactionSortField;

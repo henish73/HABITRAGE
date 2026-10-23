@@ -103,26 +103,16 @@ export function CashRunwayWidget() {
             vectorEffect="non-scaling-stroke"
             className="line transition-all duration-500"
           />
-
-          {/* Key Milestone Indicator Points */}
-          <g fill="var(--surface)" strokeWidth="2" vectorEffect="non-scaling-stroke">
-            <circle cx="180" cy="37" r="4.5" stroke="var(--pos)" />
-            <circle cx="300" cy="68.8" r="4.5" stroke="var(--neg)" />
-            <circle cx="440" cy="86.8" r="4.5" stroke="var(--warn)" />
-            <circle cx="460" cy="46.2" r="4.5" stroke="var(--pos)" />
-          </g>
-
-          {/* Current balance indicator node */}
-          <circle cx="0" cy="58.3" r="5" fill="var(--teal)" />
         </svg>
 
         {/* Dynamic Timeline Axis */}
         <div className="flex justify-between items-center font-mono text-[10.5px] text-[var(--faint)] pt-1 px-1">
-          <span>Today</span>
-          <span>Oct 30</span>
-          <span>Nov 5</span>
-          <span>Nov 12</span>
-          <span>Nov 20</span>
+          {(forecastData?.timelineLabels && forecastData.timelineLabels.length > 0
+            ? forecastData.timelineLabels
+            : ['Today', '+7d', '+14d', '+21d', '+30d']
+          ).map((lbl: string, i: number) => (
+            <span key={i}>{lbl}</span>
+          ))}
         </div>
       </div>
     </div>

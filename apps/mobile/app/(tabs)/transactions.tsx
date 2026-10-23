@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, SafeAreaView } from "react-native";
 import { formatCAD } from "@financeos/shared";
-import { SEED_TRANSACTIONS_FALLBACK, fetchTransactions, MobileTransaction } from "../../src/lib/api";
+import { fetchTransactions, MobileTransaction } from "../../src/lib/api";
 import { Search, Filter, ArrowDownRight, ArrowUpRight } from "lucide-react-native";
 
 export default function MobileTransactions() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "expenses" | "income" | "pending">("all");
-  const [transactions, setTransactions] = useState<MobileTransaction[]>(SEED_TRANSACTIONS_FALLBACK);
+  const [transactions, setTransactions] = useState<MobileTransaction[]>([]);
 
   useEffect(() => {
     fetchTransactions().then((txs) => {

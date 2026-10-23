@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
+import { parseDeleteIntent } from '@/lib/delete-intent';
 import { formatCAD } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,7 +12,7 @@ export async function GET() {
     const history = await db.getAiChatHistory();
     return NextResponse.json({ success: true, history });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
 
@@ -19,7 +21,7 @@ export async function DELETE() {
     await db.clearAiChatHistory();
     return NextResponse.json({ success: true, message: 'Chat history cleared' });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
 
@@ -102,7 +104,7 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'deleteTransaction',
-      description: 'Delete a transaction from the ledger by ID or by searching for its merchant/description.',
+      description: 'Find a transaction the user wants deleted and propose it. This never deletes anything: the user confirms in the app.',
       parameters: {
         type: 'object',
         properties: {
@@ -272,8 +274,8 @@ async function executeTool(name: string, args: any): Promise<any> {
       if (args.category !== undefined) allowedUpdates.category = args.category;
       if (args.description !== undefined) allowedUpdates.description = args.description;
       if (args.merchant !== undefined) allowedUpdates.merchant = args.merchant;
-      if (args.amount !== undefined) allowedUpdates.amount = Number(args.amount);
-      if (args.date !== undefined) allowedUpdates.date = args.date;
+      if (args.amount !== undefined && Number.isFinite(Number(args.amount))) allowedUpdates.amount = Number(args.amount);
+      if (typeof args.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(args.date)) allowedUpdates.date = args.date;
 
       const updated = await db.updateTransaction(args.id, allowedUpdates);
       return {
@@ -297,28 +299,22 @@ async function executeTool(name: string, args: any): Promise<any> {
       }
       if (!targetId || !matchedTx) return { success: false, message: 'Could not find matching transaction to delete.' };
 
-      if (!args.confirm) {
-        return {
-          success: true,
-          requiresConfirmation: true,
-          action: 'deleteTransaction',
-          transactionId: targetId,
-          details: {
-            date: matchedTx.date,
-            description: matchedTx.description,
-            amount: matchedTx.amount,
-            merchant: matchedTx.merchant,
-          },
-          message: `Please confirm deletion: "${matchedTx.description}" (${formatCAD(matchedTx.amount)} on ${matchedTx.date}).`,
-        };
-      }
-
-      const success = await db.deleteTransaction(targetId);
+      // Deleting always needs the user's confirmation in the app, so the model can only propose.
       return {
-        success,
-        message: success
-          ? `Transaction "${matchedTx.description}" (${targetId}) was successfully deleted.`
-          : 'Transaction not found.',
+        success: true,
+        requiresConfirmation: true,
+        action: 'deleteTransaction',
+        transactionId: targetId,
+        details: {
+          id: matchedTx.id,
+          date: matchedTx.date,
+          description: matchedTx.description,
+          amount: matchedTx.amount,
+          merchant: matchedTx.merchant,
+          account_id: matchedTx.account_id,
+          category: matchedTx.category,
+        },
+        message: `Proposed deleting "${matchedTx.description}" (${formatCAD(matchedTx.amount)} on ${matchedTx.date}). The user must confirm it in the app.`,
       };
     }
 
@@ -411,6 +407,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Message is required' }, { status: 400 });
     }
     const userMessage = rawMessage.trim();
+    if (userMessage.length > 2000) {
+      return NextResponse.json({ success: false, error: 'Keep messages under 2,000 characters.' }, { status: 400 });
+    }
 
     // Save user message to history
     await db.addAiChatMessage('user', userMessage);
@@ -459,6 +458,7 @@ Rules:
         // First Turn: Call model with available tools
         const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
+          signal: AbortSignal.timeout(30_000),
           headers: {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
@@ -511,6 +511,7 @@ Rules:
               // Second Turn: Send tool results back to model for final formatted answer
               const turn2Res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
+                signal: AbortSignal.timeout(30_000),
                 headers: {
                   Authorization: `Bearer ${apiKey}`,
                   'Content-Type': 'application/json',
@@ -565,44 +566,72 @@ Rules:
       }
     }
 
-    // Check if any executed function call or user request proposed a destructive action
+    // Helper to calculate exact balance preview for credit cards vs bank accounts
+    const calculateBalanceImpact = async (tx: any) => {
+      const accounts = await db.getAccounts();
+      const account = tx.account_id ? accounts.find(a => a.id === tx.account_id) : undefined;
+      if (!account || !(tx.id || tx.transactionId)) return null;
+      const isCredit = account.type === 'credit_card';
+      const currentBal = account.balance ?? 0;
+      // On credit cards, balance is debt. Deleting an expense (amount < 0) reduces debt owed: $709.86 + (-$5.82) = $704.04
+      // Deleting a payment (amount > 0) increases debt: $709.86 + $50.00 = $759.86
+      // On bank accounts, balance is cash. Deleting an expense (amount < 0) increases cash: $71.80 - (-$5.82) = $77.62
+      // Deleting a deposit (amount > 0) reduces cash: $71.80 - $100.00 = -$28.20
+      const newBal = isCredit ? (currentBal + tx.amount) : (currentBal - tx.amount);
+      return {
+        transactionId: tx.id || tx.transactionId,
+        merchant: tx.merchant || tx.description || 'Transaction',
+        date: tx.date || new Date().toISOString().split('T')[0],
+        amount: tx.amount,
+        accountName: account.account_name,
+        accountId: account.id,
+        category: tx.category || 'General',
+        balanceBefore: Math.round(currentBal * 100) / 100,
+        balanceAfter: Math.round(newBal * 100) / 100,
+      };
+    };
+
+    // Check if any executed function call or specific user request proposed deleting a transaction
     let proposedAction = null;
     const confirmCall = functionCallsExecuted.find(fc => fc.result?.requiresConfirmation || fc.name === 'deleteTransaction');
 
     if (confirmCall && confirmCall.result?.details) {
-      const tx = confirmCall.result.details;
-      const account = await db.getAccountById(tx.account_id);
-      const currentBal = account?.balance || 71.80;
-      const newBal = currentBal - tx.amount;
-      proposedAction = {
-        transactionId: confirmCall.result.transactionId,
-        merchant: tx.merchant || tx.description,
-        date: tx.date,
-        amount: tx.amount,
-        accountName: account?.account_name || 'TD Chequing',
-        balanceBefore: Math.round(currentBal * 100) / 100,
-        balanceAfter: Math.round(newBal * 100) / 100,
-        accountId: tx.account_id,
-      };
-    } else if (userMessage.toLowerCase().includes('delete') || userMessage.toLowerCase().includes('remove')) {
-      const query = userMessage.toLowerCase().includes('uber') ? 'Uber' : userMessage.replace(/delete|remove|the|charge|duplicate|from|yesterday/gi, '').trim() || 'Uber';
-      const found = await db.getTransactions({ search: query, limit: 1 });
-      if (found.transactions.length > 0) {
-        const tx = found.transactions[0];
-        const account = await db.getAccountById(tx.account_id);
-        const currentBal = account?.balance || 71.80;
-        const newBal = currentBal - tx.amount;
-        proposedAction = {
-          transactionId: tx.id,
-          merchant: tx.merchant || tx.description,
-          date: tx.date,
-          amount: tx.amount,
-          accountName: account?.account_name || 'TD Chequing',
-          balanceBefore: Math.round(currentBal * 100) / 100,
-          balanceAfter: Math.round(newBal * 100) / 100,
-          accountId: tx.account_id,
-        };
-        responseText = "I found one match. Nothing changes until you confirm.";
+      proposedAction = await calculateBalanceImpact({
+        ...confirmCall.result.details,
+        id: confirmCall.result.transactionId,
+      });
+    } else {
+      const intent = parseDeleteIntent(userMessage);
+      if (intent) {
+        const found = await db.getTransactions({
+          search: intent.merchant,
+          date_from: intent.date,
+          date_to: intent.date,
+          sort_by: 'date',
+          sort_order: 'desc',
+          limit: 50,
+        });
+        let candidates = found.transactions;
+        if (intent.accountHint) {
+          const hint = intent.accountHint.toLowerCase();
+          const narrowed = candidates.filter((t) => {
+            const name = `${t.account?.bank_name ?? ''} ${t.account?.account_name ?? ''}`.toLowerCase();
+            return hint.split(/\s+/).every((w) => name.includes(w));
+          });
+          if (narrowed.length > 0) candidates = narrowed;
+        }
+        if (intent.amount !== undefined) {
+          const byAmount = candidates.filter((t) => Math.abs(Math.abs(t.amount) - intent.amount!) < 0.005);
+          if (byAmount.length > 0) candidates = byAmount;
+        }
+        const tx = candidates[0];
+        if (tx) {
+          proposedAction = await calculateBalanceImpact(tx);
+          const others = found.total - 1;
+          responseText = `I found "${tx.description}" (${formatCAD(tx.amount)} on ${tx.date}).${others > 0 ? ` It's the most recent of ${found.total} matches.` : ''} Nothing changes until you confirm.`;
+        } else {
+          responseText = `I couldn't find a transaction matching "${intent.merchant}"${intent.date ? ` on ${intent.date}` : ''}. Try the merchant name as it appears in Activity.`;
+        }
       }
     }
 
@@ -619,7 +648,7 @@ Rules:
     });
   } catch (error: any) {
     console.error('Chat API Error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
 

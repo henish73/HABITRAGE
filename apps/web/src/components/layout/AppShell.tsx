@@ -11,9 +11,10 @@ import { CreateTransactionModal } from '@/components/transactions/CreateTransact
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
+  // Login and the printable report are standalone pages without the app chrome.
+  const isStandalone = pathname === '/login' || pathname === '/report';
 
-  if (isLoginPage) {
+  if (isStandalone) {
     return (
       <main className="min-h-screen w-full flex items-center justify-center bg-[var(--canvas)]">
         {children}

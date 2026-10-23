@@ -191,6 +191,8 @@ export function FloatingAiWidget() {
                           balanceBefore={m.proposedAction.balanceBefore}
                           balanceAfter={m.proposedAction.balanceAfter}
                           transactionId={m.proposedAction.transactionId}
+                          accountId={m.proposedAction.accountId}
+                          category={m.proposedAction.category}
                           onConfirm={async () => {
                             const res = await fetch(`/api/transactions/${m.proposedAction.transactionId}`, { method: 'DELETE' });
                             if (!res.ok) {

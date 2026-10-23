@@ -4,6 +4,7 @@ import { db } from '@financeos/db';
 export const dynamic = 'force-dynamic';
 
 import { updateBillSchema } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
 
 export async function PUT(
   req: Request,
@@ -21,7 +22,7 @@ export async function PUT(
     }
     return NextResponse.json({ success: true, bill: updated });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return apiError(error, 400);
   }
 }
 
@@ -37,6 +38,6 @@ export async function DELETE(
     }
     return NextResponse.json({ success: true, message: 'Bill deleted' });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }

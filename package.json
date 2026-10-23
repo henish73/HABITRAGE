@@ -10,7 +10,9 @@
     "lint": "turbo lint",
     "seed": "pnpm --filter @financeos/db seed",
     "generate": "pnpm --filter @financeos/db generate",
-    "test": "pnpm --filter @financeos/db test"
+    "test": "pnpm --filter @financeos/db test && pnpm --filter web test",
+    "build:packages": "pnpm --filter @financeos/design-tokens build && pnpm --filter @financeos/shared build && pnpm --filter @financeos/db build",
+    "typecheck": "pnpm build:packages && pnpm --filter web typecheck && pnpm --filter @financeos/mobile typecheck"
   },
   "devDependencies": {
     "turbo": "^2.4.4",

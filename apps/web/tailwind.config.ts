@@ -1,4 +1,6 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
+import { tokens, themeCssVariables } from "@financeos/design-tokens";
 
 const config: Config = {
   darkMode: ["class"],
@@ -110,7 +112,15 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Theme variables are generated from the shared design tokens, so web and mobile use one palette.
+    plugin(({ addBase }) => {
+      addBase({
+        ":root": themeCssVariables(tokens.colors.light),
+        '.dark, [data-theme="dark"]': themeCssVariables(tokens.colors.dark),
+      });
+    }),
+  ],
 };
 
 export default config;

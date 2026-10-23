@@ -3,13 +3,14 @@ import { db } from '@financeos/db';
 
 export const dynamic = 'force-dynamic';
 import { createBillSchema } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
 
 export async function GET() {
   try {
     const bills = await db.getBills();
     return NextResponse.json({ success: true, bills });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
 
@@ -23,6 +24,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ success: true, bill: newBill }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return apiError(error, 400);
   }
 }

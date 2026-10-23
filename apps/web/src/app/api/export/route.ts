@@ -1,95 +1,73 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
+import { filtersFromSearchParams, pagingFromSearchParams } from '@/lib/tx-filters';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Sanitize a cell value to prevent CSV formula injection.
- * Prefixes dangerous leading chars (=, +, -, @, TAB, CR) with a single-quote
- * so Excel/Sheets treat them as text, not formulas.
+ * Stops spreadsheet formula injection: a cell starting with = + - @ (or a tab/CR)
+ * would run as a formula when opened in Excel or Sheets, so it gets a leading quote.
  */
 function sanitizeCell(value: string): string {
-  const dangerous = ['=', '+', '-', '@', '\t', '\r'];
-  if (dangerous.some((c) => value.startsWith(c))) {
-    return `'${value}`;
-  }
-  return value;
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
 }
 
-/** Wrap a value in double-quotes, escaping inner double-quotes. */
-function csvQuote(value: string | number | null | undefined): string {
-  const str = String(value ?? '');
-  return `"${sanitizeCell(str).replace(/"/g, '""')}"`;
+function csvText(value: string | null | undefined): string {
+  return `"${sanitizeCell(String(value ?? '')).replace(/"/g, '""')}"`;
 }
 
+const money = (n: number | null | undefined) => (n === null || n === undefined ? '' : n.toFixed(2));
+
+const HEADERS = [
+  'Date', 'Bank', 'Account', 'Account_Number', 'Description', 'Merchant', 'Category', 'Type',
+  'Amount', 'Debit', 'Credit', 'Running_Balance', 'Status', 'Reference_Number',
+];
+
+/** CSV of exactly the transactions the current filters match (same rules as the Activity list). */
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const search = searchParams.get('search') || undefined;
-    const date_from = searchParams.get('date_from') || undefined;
-    const date_to = searchParams.get('date_to') || undefined;
-    const status = (searchParams.get('status') as any) || undefined;
+    const filters = filtersFromSearchParams(searchParams);
+    const { limit } = pagingFromSearchParams(searchParams, 50000, 50000);
 
-    // Fetch up to 50,000 rows — caller can add limit param to restrict further
-    const limitParam = searchParams.get('limit');
-    const limit = limitParam ? Math.min(parseInt(limitParam, 10), 50000) : 50000;
+    const data = await db.getTransactions({ ...filters, page: 1, limit });
 
-    const data = await db.getTransactions({
-      search,
-      date_from,
-      date_to,
-      status,
-      limit,
-    });
-
-    const headers = [
-      'Date',
-      'Bank',
-      'Account_Name',
-      'Account_Number',
-      'Description',
-      'Merchant',
-      'Category',
-      'Amount',
-      'Debit',
-      'Credit',
-      'Running_Balance',
-      'Status',
-      'Reference_Number',
-    ];
-
-    const csvRows = [headers.map(csvQuote).join(',')];
-
+    const lines = [HEADERS.map((h) => `"${h}"`).join(',')];
     for (const t of data.transactions) {
-      const row = [
-        csvQuote(t.date),
-        csvQuote(t.account?.bank_name || ''),
-        csvQuote(t.account?.account_name || ''),
-        csvQuote(t.account?.account_number || ''),
-        csvQuote(t.description || ''),
-        csvQuote(t.merchant || ''),
-        csvQuote(t.category || ''),
-        t.amount,                                  // numeric — safe
-        t.debit ?? '',                             // numeric
-        t.credit ?? '',                            // numeric
-        t.running_balance !== null && t.running_balance !== undefined
-          ? t.running_balance
-          : '',
-        csvQuote(t.status),
-        csvQuote(t.reference_number || ''),
-      ];
-      csvRows.push(row.join(','));
+      lines.push(
+        [
+          csvText(t.date),
+          csvText(t.account?.bank_name),
+          csvText(t.account?.account_name),
+          csvText(t.account?.account_number),
+          csvText(t.description),
+          csvText(t.merchant),
+          csvText(t.category),
+          csvText(t.type),
+          money(t.amount),
+          money(t.debit),
+          money(t.credit),
+          money(t.running_balance),
+          csvText(t.status),
+          csvText(t.reference_number),
+        ].join(',')
+      );
     }
 
-    const csvContent = csvRows.join('\n');
-    return new Response(csvContent, {
+    const range = filters.date_from || filters.date_to ? `_${filters.date_from || 'start'}_to_${filters.date_to || 'today'}` : '';
+    const filename = `financeos_transactions${range}.csv`;
+
+    // The BOM makes Excel read the file as UTF-8, so accented merchant names stay intact.
+    return new Response('﻿' + lines.join('\r\n') + '\r\n', {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="financeos_export_${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
         'X-Row-Count': String(data.transactions.length),
+        'X-Total-Matching': String(data.total),
       },
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('Export error:', error);
+    return NextResponse.json({ success: false, error: 'Could not create the export.' }, { status: 500 });
   }
 }

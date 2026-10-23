@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
+import { apiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -54,6 +55,6 @@ export async function GET() {
       categoryChartData,
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }

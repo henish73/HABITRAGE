@@ -18,14 +18,12 @@ export async function GET() {
       totalDebts: netWorthStats.totalDebts,
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return apiError(error, 500);
   }
 }
 
 import { accountSchema } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
 
 export async function POST(req: Request) {
   try {
@@ -34,9 +32,6 @@ export async function POST(req: Request) {
     const newAccount = await db.createAccount(validated);
     return NextResponse.json({ success: true, account: newAccount }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 400 }
-    );
+    return apiError(error, 400);
   }
 }

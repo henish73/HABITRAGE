@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   CreditCard,
   CalendarDays,
+  BarChart3,
   Sparkles,
   Settings,
   LogOut,
@@ -41,6 +42,7 @@ export function Sidebar() {
     { name: 'Activity', href: '/activity', icon: ArrowLeftRight, match: (p: string) => p === '/activity' || p.startsWith('/transactions') },
     { name: 'Wallet', href: '/wallet', icon: CreditCard, match: (p: string) => p === '/wallet' || p.startsWith('/accounts') },
     { name: 'Plan', href: '/plan', icon: CalendarDays, match: (p: string) => p === '/plan' || p.startsWith('/bills') },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3, match: (p: string) => p.startsWith('/analytics') },
   ];
 
   const handleLogout = async () => {

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SESSION_COOKIE_NAME, verifySessionToken, MASTER_PASSCODE } from '@/lib/auth';
+import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/auth';
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow static Next.js assets, favicon, login page, and auth APIs
-  const isStaticFile = /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|map|txt)$/i.test(pathname);
+  // Never treat any /api route as a static file
+  const isStaticFile = !pathname.startsWith('/api') && /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|map)$/i.test(pathname);
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
+    pathname === '/api/health' ||
     pathname === '/login' ||
     pathname === '/favicon.ico' ||
     isStaticFile
@@ -20,19 +22,13 @@ export async function middleware(req: NextRequest) {
   const sessionToken = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   let isAuthenticated = await verifySessionToken(sessionToken);
 
-  // Fallback for API clients using Authorization header
+  // API clients (the mobile app) send the signed session token as a bearer token.
+  // The passcode itself is never accepted here: it is only exchanged at /api/auth/login.
   if (!isAuthenticated && pathname.startsWith('/api')) {
     const authHeader = req.headers.get('authorization');
-    if (authHeader) {
-      const parts = authHeader.split(' ');
-      if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') {
-        const secret = parts[1];
-        if (secret === MASTER_PASSCODE) {
-          isAuthenticated = true;
-        } else {
-          isAuthenticated = await verifySessionToken(secret);
-        }
-      }
+    const match = authHeader?.match(/^Bearer\s+(\S+)$/i);
+    if (match) {
+      isAuthenticated = await verifySessionToken(match[1]);
     }
   }
 
@@ -44,11 +40,12 @@ export async function middleware(req: NextRequest) {
     );
   }
 
-  // If unauthorized page request: redirect to /login
+  // If unauthorized page request: redirect to /login with search query preserved
   if (!isAuthenticated) {
     const loginUrl = new URL('/login', req.url);
-    if (pathname !== '/') {
-      loginUrl.searchParams.set('next', pathname);
+    const fullPath = pathname + req.nextUrl.search;
+    if (pathname !== '/' || req.nextUrl.search) {
+      loginUrl.searchParams.set('next', fullPath);
     }
     return NextResponse.redirect(loginUrl);
   }

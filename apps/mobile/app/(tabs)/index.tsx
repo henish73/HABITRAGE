@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } from "react-native";
 import { formatCAD } from "@financeos/shared";
-import { SEED_ACCOUNTS_FALLBACK, SEED_TRANSACTIONS_FALLBACK, fetchAccounts, fetchTransactions, MobileAccount, MobileTransaction } from "../../src/lib/api";
+import { fetchAccounts, fetchTransactions, MobileAccount, MobileTransaction } from "../../src/lib/api";
 import { ArrowDownRight, ArrowUpRight, Shield, AlertTriangle, Eye, EyeOff } from "lucide-react-native";
 
 export default function MobileDashboard() {
-  const [accounts, setAccounts] = useState<MobileAccount[]>(SEED_ACCOUNTS_FALLBACK);
-  const [transactions, setTransactions] = useState<MobileTransaction[]>(SEED_TRANSACTIONS_FALLBACK);
-  const [isMasked, setIsMasked] = useState(false);
+  const [accounts, setAccounts] = useState<MobileAccount[]>([]);
+  const [transactions, setTransactions] = useState<MobileTransaction[]>([]);
+  const [isMasked, setIsMasked] = useState(true);
 
   useEffect(() => {
     fetchAccounts().then((accs) => {

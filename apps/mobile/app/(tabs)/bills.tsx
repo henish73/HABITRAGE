@@ -1,32 +1,44 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, Alert } from "react-native";
+import { fetchBills, payBill, MobileBill } from "../../src/lib/api";
 import { formatCAD } from "@financeos/shared";
 import { Calendar, CheckCircle2, Clock, AlertCircle } from "lucide-react-native";
 
-interface MobileBill {
-  id: string;
-  name: string;
-  amount: number;
-  type: string;
-  due_day: number;
-  next_due_date: string;
-  is_paid: boolean;
-  autopay: boolean;
-}
-
-const INITIAL_BILLS: MobileBill[] = [
-  { id: "b1", name: "Apartment Rent", amount: 1950.00, type: "rent", due_day: 1, next_due_date: "2024-11-01", is_paid: false, autopay: false },
-  { id: "b2", name: "Rogers Home Internet", amount: 105.00, type: "utility", due_day: 15, next_due_date: "2024-10-15", is_paid: false, autopay: true },
-  { id: "b3", name: "Hydro One Utilities", amount: 84.50, type: "utility", due_day: 22, next_due_date: "2024-10-22", is_paid: false, autopay: true },
-  { id: "b4", name: "CIBC Dividend Visa Minimum", amount: 142.05, type: "credit_card", due_day: 28, next_due_date: "2024-10-28", is_paid: false, autopay: false },
-];
-
 export default function MobileBills() {
-  const [bills, setBills] = useState(INITIAL_BILLS);
+  const [bills, setBills] = useState<MobileBill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
-  const togglePaid = (id: string) => {
-    setBills((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, is_paid: !b.is_paid } : b))
+  const load = useCallback(async () => {
+    setBills(await fetchBills());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const confirmPay = (bill: MobileBill) => {
+    Alert.alert(
+      `Mark ${bill.name} paid?`,
+      `This records a ${formatCAD(bill.amount)} payment and moves the due date to the next cycle.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Mark paid",
+          onPress: async () => {
+            setPayingId(bill.id);
+            try {
+              await payBill(bill.id);
+              await load();
+            } catch (err: any) {
+              Alert.alert("Not paid", err?.message || "Try again.");
+            } finally {
+              setPayingId(null);
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -38,7 +50,7 @@ export default function MobileBills() {
       <View style={styles.summaryCard}>
         <Text style={styles.summaryLabel}>TOTAL RECURRING EXPENSES</Text>
         <Text style={styles.summaryValue}>{formatCAD(totalMonthlyBills)}/mo</Text>
-        <Text style={styles.summarySub}>4 tracked commitments • Auto-notifications active</Text>
+        <Text style={styles.summarySub}>{loading ? "Loading bills…" : `${bills.length} tracked bill${bills.length === 1 ? "" : "s"}`}</Text>
       </View>
 
       {/* Bills List */}
@@ -47,6 +59,13 @@ export default function MobileBills() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshing={loading}
+        onRefresh={load}
+        ListEmptyComponent={
+          loading ? null : (
+            <Text style={styles.summarySub}>No bills yet. Add one from the web app's Plan page.</Text>
+          )
+        }
         renderItem={({ item }) => (
           <View style={[styles.billCard, item.is_paid && styles.billCardPaid]}>
             <View style={styles.billMainRow}>
@@ -73,7 +92,8 @@ export default function MobileBills() {
               </View>
 
               <TouchableOpacity
-                onPress={() => togglePaid(item.id)}
+                onPress={() => confirmPay(item)}
+                disabled={item.is_paid || payingId === item.id}
                 style={[styles.payButton, item.is_paid && styles.payButtonPaid]}
               >
                 <CheckCircle2 size={14} color={item.is_paid ? "#10B981" : "#FFFFFF"} />

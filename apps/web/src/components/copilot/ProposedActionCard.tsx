@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Trash2, AlertCircle, Check, X, ArrowRight } from 'lucide-react';
 import { formatCAD } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface ProposedActionProps {
-  type: 'delete' | 'update' | 'categorize';
+  type?: 'delete' | 'update' | 'categorize';
   merchant: string;
   date: string;
   amount: number;
@@ -14,6 +15,8 @@ interface ProposedActionProps {
   balanceBefore: number;
   balanceAfter: number;
   transactionId?: string;
+  accountId?: string;
+  category?: string;
   onConfirm: () => Promise<void> | void;
   onCancel: () => void;
 }
@@ -26,9 +29,13 @@ export function ProposedActionCard({
   accountName,
   balanceBefore,
   balanceAfter,
+  transactionId,
+  accountId,
+  category,
   onConfirm,
   onCancel,
 }: ProposedActionProps) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [resolved, setResolved] = useState<'confirmed' | 'cancelled' | null>(null);
 
@@ -37,26 +44,23 @@ export function ProposedActionCard({
     try {
       await onConfirm();
       setResolved('confirmed');
-      toast.success('Action executed · 30-day recovery available', {
+      toast.success('Deleted. You can undo this for 30 days.', {
         action: {
           label: 'Undo',
           onClick: async () => {
             try {
-              await fetch('/api/transactions', {
+              const res = await fetch('/api/transactions/restore', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  merchant,
-                  description: merchant,
-                  amount,
-                  date,
-                  category: 'General',
-                  account_id: '1db86ad3-598c-4314-81a9-25f166676060',
-                }),
+                body: JSON.stringify({ id: transactionId }),
               });
-              toast.success('Transaction restored successfully.');
+              if (!res.ok) throw new Error('Restore failed');
+              queryClient.invalidateQueries({ queryKey: ['transactions'] });
+              queryClient.invalidateQueries({ queryKey: ['accounts'] });
+              queryClient.invalidateQueries({ queryKey: ['forecast'] });
+              toast.success(`Restored to ${accountName}.`);
             } catch {
-              toast.error('Failed to restore transaction.');
+              toast.error('Failed to restore transaction from trash.');
             }
           },
         },

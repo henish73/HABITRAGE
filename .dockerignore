@@ -3,8 +3,10 @@ node_modules
 .git
 .turbo
 dist
-apps/mobile
-.env*
+apps/mobile/*
+!apps/mobile/package.json
+**/.env*
+!**/.env.example
 txt
 data/seed_cache.json
 datasets_financial_mesh/
@@ -14,3 +16,8 @@ data/*.csv
 *.pdf
 *.zip
 Transactions-With-Type-V3.csv
+**/node_modules
+.claude
+docs
+**/*.tmp
+**/.next-*

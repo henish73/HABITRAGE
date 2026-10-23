@@ -1,7 +1,26 @@
-import { formatCAD, maskAccountNumber } from "@financeos/shared";
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { create } from "zustand";
+import { tokens } from "@financeos/design-tokens";
 
-// Base URL for connecting to local Next.js dev server or Supabase
-export const API_BASE = "http://10.0.2.2:3000/api"; // 10.0.2.2 is Android emulator localhost alias
+export { tokens };
+
+/**
+ * API server. Set EXPO_PUBLIC_API_URL (e.g. https://financeos.example.com/api) for
+ * real devices and production builds. In development it falls back to the local
+ * Next.js server: 10.0.2.2 is the Android emulator's alias for the host machine.
+ */
+function resolveApiBase(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_URL;
+  const fromConfig = (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl;
+  const configured = fromEnv || fromConfig;
+  if (configured) return configured.replace(/\/$/, "");
+  return Platform.OS === "android" ? "http://10.0.2.2:3000/api" : "http://localhost:3000/api";
+}
+
+export const API_BASE = resolveApiBase();
 
 export interface MobileAccount {
   id: string;
@@ -23,56 +42,167 @@ export interface MobileTransaction {
   status: "posted" | "pending";
 }
 
-export const SEED_ACCOUNTS_FALLBACK: MobileAccount[] = [
-  { id: "612d1e2a", bank_name: "CIBC", account_name: "CIBC Smart Account", account_number: "****7339", type: "bank", balance: 2138.00 },
-  { id: "ea16023e", bank_name: "CIBC", account_name: "CIBC eAdvantage Savings", account_number: "****5832", type: "bank", balance: 0.00 },
-  { id: "1db86ad3", bank_name: "TD", account_name: "TD Every Day Chequing", account_number: "****7089", type: "bank", balance: 71.80 },
-  { id: "1b5390f2", bank_name: "TD", account_name: "TD High Interest Savings", account_number: "****9086", type: "bank", balance: 0.00 },
-  { id: "be25faac", bank_name: "RBC", account_name: "RBC Day to Day Banking", account_number: "****7173", type: "bank", balance: 0.09 },
-  { id: "8ba228f0", bank_name: "RBC", account_name: "RBC High Interest eSavings", account_number: "****7181", type: "bank", balance: 0.00 },
-  { id: "b11d5d61", bank_name: "RBC", account_name: "RBC NOMI Find & Save", account_number: "****9475", type: "bank", balance: 0.00 },
-  { id: "c6575c87", bank_name: "Amex", account_name: "Amex Essential Credit Card", account_number: "****1005", type: "credit_card", balance: 10145.23, credit_limit: 13500 },
-  { id: "c9a74401", bank_name: "Amex", account_name: "Amex Green Card", account_number: "****1008", type: "credit_card", balance: 4595.92, credit_limit: 8500 },
-  { id: "2d7ed5ca", bank_name: "TD", account_name: "TD Low Rate Visa", account_number: "****1993", type: "credit_card", balance: 709.86, credit_limit: 1000 },
-  { id: "860b05ea", bank_name: "Rogers", account_name: "Rogers Mastercard", account_number: "****4379", type: "credit_card", balance: 75.71, credit_limit: 500 },
-  { id: "0089d558", bank_name: "CIBC", account_name: "CIBC Dividend Visa", account_number: "****7254", type: "credit_card", balance: 31.44, credit_limit: 3500 },
-  { id: "1fe5a648", bank_name: "Amex", account_name: "Amex SimplyCash Card", account_number: "****1008", type: "credit_card", balance: -369.88, credit_limit: 1100 },
-];
+// ---------- Session ----------
 
-export const SEED_TRANSACTIONS_FALLBACK: MobileTransaction[] = [
-  { id: "t1", date: "2026-10-16", description: "GARDA CANADA PAYROLL", merchant: "Garda Canada", category: "Payroll", amount: 751.30, status: "posted" },
-  { id: "t2", date: "2026-10-16", description: "TIM HORTONS #4211 TORONTO", merchant: "Tim Hortons", category: "Dining", amount: -4.85, status: "posted" },
-  { id: "t3", date: "2026-10-16", description: "TRANSFER TO CARD PAYMENT", merchant: "Transfer to card", category: "Transfers", amount: -150.00, status: "posted" },
-  { id: "t4", date: "2026-10-15", description: "UBER RIDE TRIP", merchant: "Uber", category: "Rideshare", amount: -5.82, status: "posted" },
-  { id: "t5", date: "2026-10-15", description: "TD MONTHLY SERVICE FEE", merchant: "TD monthly fee", category: "Bank fees", amount: -5.00, status: "posted" },
-  { id: "t6", date: "2026-10-15", description: "INTERAC E-TRANSFER SENT", merchant: "e-Transfer sent", category: "Transfers", amount: -50.50, status: "posted" },
-];
+const TOKEN_KEY = "financeos.session";
+
+type SessionState = {
+  token: string | null;
+  ready: boolean;
+  load: () => Promise<void>;
+  signIn: (passcode: string) => Promise<void>;
+  signOut: () => Promise<void>;
+};
+
+/** The signed session token lives in the device keychain; the passcode is never stored. */
+export const useSession = create<SessionState>((set) => ({
+  token: null,
+  ready: false,
+  load: async () => {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+    set({ token, ready: true });
+  },
+  signIn: async (passcode: string) => {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode, client: "mobile" }),
+      });
+    } catch {
+      throw new Error("Can't reach FinanceOS. Check your connection and try again.");
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.token) {
+      throw new Error(data.error || "Sign-in failed. Try again.");
+    }
+    await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+    set({ token: data.token });
+  },
+  signOut: async () => {
+    await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+    await AsyncStorage.multiRemove(Object.values(CACHE_KEYS)).catch(() => {});
+    set({ token: null });
+  },
+}));
+
+// ---------- Sync status ----------
+
+type SyncState = {
+  source: "live" | "cache" | "none";
+  syncedAt: string | null;
+  setStatus: (source: SyncState["source"], syncedAt: string | null) => void;
+};
+
+/** Tells screens whether they're showing live data or the last saved copy. */
+export const useSyncStatus = create<SyncState>((set) => ({
+  source: "none",
+  syncedAt: null,
+  setStatus: (source, syncedAt) => set({ source, syncedAt }),
+}));
+
+const CACHE_KEYS = {
+  accounts: "financeos.cache.accounts",
+  transactions: "financeos.cache.transactions",
+  bills: "financeos.cache.bills",
+};
+
+export interface MobileBill {
+  id: string;
+  name: string;
+  amount: number;
+  type: string;
+  due_day: number;
+  next_due_date: string;
+  is_paid: boolean;
+  autopay: boolean;
+}
+
+type Cached<T> = { data: T; syncedAt: string };
+
+async function readCache<T>(key: string): Promise<Cached<T> | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Cached<T>) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache<T>(key: string, data: T): Promise<string> {
+  const syncedAt = new Date().toISOString();
+  await AsyncStorage.setItem(key, JSON.stringify({ data, syncedAt })).catch(() => {});
+  return syncedAt;
+}
+
+/**
+ * Fetches from the API with the session token. A 401 signs the user out so the
+ * app returns to the login screen. Network failures fall back to the last saved
+ * copy (marked as cached), never to made-up data.
+ */
+async function getWithCache<T>(path: string, cacheKey: string, pick: (json: any) => T | null): Promise<T | null> {
+  const { token, signOut } = useSession.getState();
+  const { setStatus } = useSyncStatus.getState();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" },
+    });
+    if (res.status === 401) {
+      await signOut();
+      return null;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = pick(await res.json());
+    if (data === null) throw new Error("Unexpected response");
+    const syncedAt = await writeCache(cacheKey, data);
+    setStatus("live", syncedAt);
+    return data;
+  } catch {
+    const cached = await readCache<T>(cacheKey);
+    setStatus(cached ? "cache" : "none", cached?.syncedAt ?? null);
+    return cached?.data ?? null;
+  }
+}
 
 export async function fetchAccounts(): Promise<MobileAccount[]> {
-  try {
-    const res = await fetch(`${API_BASE}/accounts`, { headers: { 'Cache-Control': 'no-cache' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.success && Array.isArray(data.accounts)) {
-      return data.accounts;
-    }
-  } catch {
-    // Fall back to seed accounts if dev server/network is unreachable
-  }
-  return SEED_ACCOUNTS_FALLBACK;
+  const data = await getWithCache<MobileAccount[]>("/accounts", CACHE_KEYS.accounts, (json) =>
+    json?.success && Array.isArray(json.accounts) ? json.accounts : null
+  );
+  return data ?? [];
 }
 
 export async function fetchTransactions(): Promise<MobileTransaction[]> {
-  try {
-    const res = await fetch(`${API_BASE}/transactions?limit=50`, { headers: { 'Cache-Control': 'no-cache' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.success && Array.isArray(data.transactions)) {
-      return data.transactions;
-    }
-  } catch {
-    // Fall back to seed transactions
-  }
-  return SEED_TRANSACTIONS_FALLBACK;
+  const data = await getWithCache<MobileTransaction[]>("/transactions?limit=50", CACHE_KEYS.transactions, (json) =>
+    json?.success && Array.isArray(json.transactions) ? json.transactions : null
+  );
+  return data ?? [];
 }
 
+export async function fetchBills(): Promise<MobileBill[]> {
+  const data = await getWithCache<MobileBill[]>("/bills", CACHE_KEYS.bills, (json) =>
+    json?.success && Array.isArray(json.bills) ? json.bills : null
+  );
+  return data ?? [];
+}
+
+/** Marks a bill paid on the server, which records the payment and moves the due date forward. */
+export async function payBill(id: string): Promise<void> {
+  const { token, signOut } = useSession.getState();
+  if (!token) throw new Error("Sign in to pay bills.");
+  const res = await fetch(`${API_BASE}/bills/${encodeURIComponent(id)}/pay`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ create_transaction: true }),
+  });
+  if (res.status === 401) {
+    await signOut();
+    throw new Error("Your session expired. Sign in again.");
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Couldn't mark this bill paid.");
+  }
+}

@@ -3,11 +3,12 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ShieldCheck, Lock, ArrowRight, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { safeNextPath } from '@/lib/safe-redirect';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextUrl = searchParams.get('next') || '/';
+  const nextUrl = safeNextPath(searchParams.get('next'));
 
   const [passcode, setPasscode] = useState('');
   const [showPasscode, setShowPasscode] = useState(false);
@@ -39,9 +40,9 @@ function LoginForm() {
         return;
       }
 
-      // Successful login -> navigate to intended destination
-      router.push(nextUrl);
-      router.refresh();
+      // Successful login -> navigate to intended destination preserving full query string
+      window.location.assign(nextUrl);
+      return;
     } catch {
       setError('Connection error. Please try again.');
       setLoading(false);

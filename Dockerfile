@@ -1,53 +1,62 @@
+# FinanceOS web app: production image (Next.js standalone).
+#
+# Required at runtime (see apps/web/.env.example):
+#   AUTH_SECRET          32+ random characters; signs session cookies
+#   FINANCEOS_PASSCODE   the vault passcode
+# Optional:
+#   OPENROUTER_API_KEY, OPENROUTER_MODEL, DATABASE_URL, DIRECT_URL, TRUSTED_PROXY_HOPS
+#
+# The JSON ledger lives at /app/data/seed_cache.json. Mount a persistent volume
+# at /app/data, or the data is lost whenever the container is replaced.
+
 FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN apk add --no-cache libc6-compat openssl && corepack enable
 WORKDIR /app
 
-# Step 1: Install dependencies
+# 1. Install dependencies for the web app and the packages it uses
 FROM base AS deps
-WORKDIR /app
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json .npmrc ./
 COPY packages/db/package.json ./packages/db/
+COPY packages/db/prisma ./packages/db/prisma
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/design-tokens/package.json ./packages/design-tokens/
 COPY apps/web/package.json ./apps/web/
-RUN pnpm install --frozen-lockfile
+COPY apps/mobile/package.json ./apps/mobile/
+RUN pnpm install --frozen-lockfile --filter "web..."
 
-# Step 2: Build the application
+# 2. Build packages, generate the Prisma client, build Next.js
 FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=deps /app ./
 COPY . .
-
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+RUN pnpm --filter @financeos/design-tokens build \
+ && pnpm --filter @financeos/shared build \
+ && pnpm --filter @financeos/db generate \
+ && pnpm --filter @financeos/db build \
+ && pnpm --filter web build
 
-# Build packages first
-RUN pnpm --filter @financeos/shared build
-RUN pnpm --filter @financeos/db build
-# Build Next.js standalone web app
-RUN pnpm --filter web build
-
-# Step 3: Minimal Production Runner
+# 3. Minimal runtime
 FROM node:20-alpine AS runner
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=8080 \
+    HOSTNAME=0.0.0.0 \
+    FINANCEOS_DATA_FILE=/app/data/seed_cache.json
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=8080
-ENV HOSTNAME="0.0.0.0"
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs \
+ && mkdir -p /app/data && chown nextjs:nodejs /app/data
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/data ./data
 
 USER nextjs
-
+VOLUME ["/app/data"]
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
 
 CMD ["node", "apps/web/server.js"]

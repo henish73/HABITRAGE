@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
+import { updateAccountSchema } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,10 +41,7 @@ export async function GET(
       recentTransactions: txData.transactions.slice(-20).reverse(),
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return apiError(error, 500);
   }
 }
 
@@ -53,13 +52,17 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const updated = await db.updateAccount(id, body);
+    const validated = updateAccountSchema.parse(body);
+    if (Object.keys(validated).length === 0) {
+      return NextResponse.json({ success: false, error: 'Nothing to update.' }, { status: 400 });
+    }
+    const updated = await db.updateAccount(id, validated);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, account: updated });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return apiError(error, 400);
   }
 }
 
@@ -75,6 +78,6 @@ export async function DELETE(
     }
     return NextResponse.json({ success: true, message: 'Account deleted' });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return apiError(error, 500);
   }
 }
