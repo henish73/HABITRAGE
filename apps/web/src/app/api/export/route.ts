@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
 import { filtersFromSearchParams, pagingFromSearchParams } from '@/lib/tx-filters';
+import { requireAuth } from '@/lib/require-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,9 @@ const HEADERS = [
 
 /** CSV of exactly the transactions the current filters match (same rules as the Activity list). */
 export async function GET(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const { searchParams } = new URL(req.url);
     const filters = filtersFromSearchParams(searchParams);

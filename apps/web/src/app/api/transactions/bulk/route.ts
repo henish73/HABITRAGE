@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
 import { sanitizeFilters, TX_TYPES } from '@/lib/tx-filters';
+import { requireAuth } from '@/lib/require-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -15,6 +16,9 @@ const MAX_BULK = 20000;
  * so a stale screen can never delete or edit a different set than the one the user saw.
  */
 export async function POST(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== 'object') {

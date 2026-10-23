@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
-
-export const dynamic = 'force-dynamic';
 import { createBillSchema } from '@financeos/shared';
 import { apiError } from '@/lib/api-error';
+import { requireAuth } from '@/lib/require-auth';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const bills = await db.getBills();
     return NextResponse.json({ success: true, bills });
@@ -15,6 +19,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const body = await req.json();
     const validated = createBillSchema.parse(body);

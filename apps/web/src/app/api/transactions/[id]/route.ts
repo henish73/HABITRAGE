@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
+import { createTransactionSchema } from '@financeos/shared';
+import { apiError } from '@/lib/api-error';
+import { requireAuth } from '@/lib/require-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -8,6 +11,9 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const { id } = await params;
     const tx = await db.getTransactionById(id);
@@ -20,13 +26,13 @@ export async function GET(
   }
 }
 
-import { createTransactionSchema } from '@financeos/shared';
-import { apiError } from '@/lib/api-error';
-
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const { id } = await params;
     const body = await req.json();
@@ -47,6 +53,9 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const { id } = await params;
     const existing = await db.getTransactionById(id);

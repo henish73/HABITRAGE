@@ -3,11 +3,15 @@ import { db } from '@financeos/db';
 import { parseDeleteIntent } from '@/lib/delete-intent';
 import { formatCAD } from '@financeos/shared';
 import { apiError } from '@/lib/api-error';
+import { requireAuth } from '@/lib/require-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const history = await db.getAiChatHistory();
     return NextResponse.json({ success: true, history });
@@ -16,7 +20,10 @@ export async function GET() {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     await db.clearAiChatHistory();
     return NextResponse.json({ success: true, message: 'Chat history cleared' });
@@ -397,6 +404,9 @@ async function executeTool(name: string, args: any): Promise<any> {
 }
 
 export async function POST(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const body = await req.json();
     const rawMessage =

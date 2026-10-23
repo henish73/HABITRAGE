@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
 import { apiError } from '@/lib/api-error';
+import { requireAuth } from '@/lib/require-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const { transactions, total } = await db.getTransactions({ limit: 10000 });
 

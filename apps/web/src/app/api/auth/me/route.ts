@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/auth';
+import { requireAuth } from '@/lib/require-auth';
 
 export async function GET(req: NextRequest) {
-  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const isValid = await verifySessionToken(token);
-
-  if (!isValid) {
+  const unauth = await requireAuth(req);
+  if (unauth) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 

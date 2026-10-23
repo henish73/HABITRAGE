@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@financeos/db';
 import { categorizeMerchant } from '@financeos/shared';
 import { apiError } from '@/lib/api-error';
+import { requireAuth } from '@/lib/require-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,6 +87,9 @@ function parseAmount(raw: string): number {
 }
 
 export async function POST(req: Request) {
+  const unauth = await requireAuth(req);
+  if (unauth) return unauth;
+
   try {
     const { csvContent, targetAccountId } = await req.json();
 
