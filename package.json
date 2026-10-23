@@ -2,7 +2,7 @@
   "name": "financeos-monorepo",
   "private": true,
   "scripts": {
-    "build": "turbo build",
+    "build": "pnpm build:packages && pnpm --filter @financeos/db generate && pnpm --filter web build",
     "dev": "turbo dev",
     "dev:web": "pnpm --filter web dev",
     "dev:mobile": "pnpm --filter @financeos/mobile start",
@@ -17,6 +17,7 @@
     "typecheck": "pnpm build:packages && pnpm --filter web typecheck && pnpm --filter @financeos/mobile typecheck"
   },
   "devDependencies": {
+    "next": "15.5.28",
     "turbo": "^2.4.4",
     "typescript": "^5.7.3"
   },
