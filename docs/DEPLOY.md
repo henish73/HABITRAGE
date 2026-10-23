@@ -7,7 +7,7 @@ FinanceOS stores its data in one JSON file (the ledger), so a few rules matter i
 1. **Set the secrets** (see `apps/web/.env.example`). The app refuses to run in production without them.
    - `AUTH_SECRET`: 32+ random characters. Generate one:
      `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
-   - `FINANCEOS_PASSCODE`: a long passphrase (use 12+ characters; it's the only thing protecting your ledger).
+   - `FINANCEOS_PASSCODE`: a long passphrase (12+ characters required in production; shorter passcodes throw on startup).
    - `TRUSTED_PROXY_HOPS`: `1` behind a single proxy (Cloud Run, Vercel, nginx).
    - Optional: `OPENROUTER_API_KEY` for the AI assistant.
 2. **Never commit** `.env*` files, `data/seed_cache.json` or your statement files. They're git-ignored.

@@ -21,12 +21,17 @@ function getAuthSecret(): string {
   return secret || DEV_SECRET;
 }
 
-/** The vault passcode. Production requires FINANCEOS_PASSCODE to be set. */
+/** The vault passcode. Production requires FINANCEOS_PASSCODE to be at least 12 characters. */
 export function getMasterPasscode(): string {
   const passcode = process.env.FINANCEOS_PASSCODE || process.env.ADMIN_PASSWORD;
-  if (passcode) return passcode;
+  if (passcode) {
+    if (IS_PRODUCTION && passcode.length < 12) {
+      throw new Error('FINANCEOS_PASSCODE must be at least 12 characters in production.');
+    }
+    return passcode;
+  }
   if (IS_PRODUCTION) {
-    throw new Error('FINANCEOS_PASSCODE must be set in production.');
+    throw new Error('FINANCEOS_PASSCODE must be set to at least 12 characters in production.');
   }
   return DEV_PASSCODE;
 }
